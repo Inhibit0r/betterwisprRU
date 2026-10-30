@@ -11,13 +11,17 @@ on:
         description: 'Тег upstream vX.Y.Z (пусто — последний релиз)'
         required: false
         default: ''
+      target_branch:
+        description: 'Ветка-цель'
+        required: false
+        default: 'orb'
 
 concurrency:
   group: sync-upstream
   cancel-in-progress: false
 
 env:
-  TARGET: orb
+  TARGET: ${{ inputs.target_branch || 'orb' }}
   TAG_IN: ${{ inputs.tag }}
   UPSTREAM: https://github.com/opennookorg/betterwispr
 
@@ -32,8 +36,9 @@ jobs:
       tag: ${{ steps.merge.outputs.tag }}
       tree: ${{ steps.merge.outputs.tree }}
     steps:
-      - name: Проверить вход
+      - name: Проверить входы
         run: |
+          [[ "$TARGET" =~ ^[A-Za-z0-9._/-]+$ ]] || { echo "недопустимая ветка: $TARGET"; exit 1; }
           [[ -z "$TAG_IN" || "$TAG_IN" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "недопустимый тег: $TAG_IN"; exit 1; }
       - uses: actions/checkout@v4
         with:
