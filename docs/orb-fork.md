@@ -13,10 +13,10 @@
 |------|------------|
 | `Sources/LiquidOrb/LiquidOrb.swift` | Экспорт орба «как есть» (SwiftUI + Metal-шейдер строкой). Не редактировать руками — менять через импорт. |
 | `Sources/BetterWispr/Features/Recording/OrbWaveform.swift` | Переходник: уровень голоса → орб, размер, сглаживание, состояния. Сюда — все свои доработки анимации. |
-| `Sources/BetterWispr/Features/Recording/CapsuleView.swift` | `OrbWaveform(...)` вместо `Waveform(...)` в `CapsuleWaveform`; размер и скругление пилюли диктовки из `OrbWaveform`; орб вместо спиннера при распознавании; подпись VoiceOver «Transcribing». |
+| `Sources/BetterWispr/Features/Recording/CapsuleView.swift` | `OrbWaveform(...)` вместо `Waveform(...)` в `CapsuleWaveform`; отступы вокруг `dictationPill` в `surface` и скругление из `OrbWaveform` (строку `.frame` пилюли не трогаем — её меняет upstream); орб вместо спиннера при распознавании; подпись VoiceOver «Transcribing». |
 | `Sources/BetterWispr/App/CapsulePlacement.swift` | Место появления капсулы и строка «Capsule position» в настройках; значение в UserDefaults (`fork.capsulePlacement`), схема AppSettings не меняется. |
 | `Sources/BetterWispr/App/CapsuleController.swift` | Одна строка: позиция панели из `CapsulePlacement`. |
-| `Sources/BetterWispr/Features/Settings/SettingsView.swift` | Две строки: `CapsulePlacementRow()` под «Floating recording capsule». |
+| `Sources/BetterWispr/Features/Settings/SettingsView.swift` | Раздел «Capsule» с `CapsulePlacementRow()` сразу после «Appearance» (рядом с тумблерами капсулы upstream вставляет свои). |
 | `Package.swift` | Модуль `LiquidOrb` (Swift 5, экспорт не рассчитан на строгую конкурентность) и зависимость от него. |
 | `Resources/Info.plist` | `SUFeedURL` указывает на релизы форка: иначе Sparkle заменит сборку с орбом на оригинал. |
 | `Tests/BetterWisprCoreTests/CapsulePlacementTests.swift` | Позиции капсулы: штатная по центру, углы, «над курсором» не двигается, пока капсула видна. |
@@ -76,15 +76,14 @@ Particle Ribbons), а в шейдере умножает высоту волн �
 
 ### Размер и поведение
 
-`OrbWaveform.swift`: `diameter` (72 pt; пилюля диктовки растёт под орб — `pillHeight`,
-`pillExtraWidth`), скорость сглаживания `LevelSmoothing` (подъём 0.3, спад 0.1 за кадр),
+`OrbWaveform.swift`: `diameter` (72 pt; орб раздвигает кнопки пилюли, а `pillPadding` растит стекло капсулы), скорость сглаживания `LevelSmoothing` (подъём 0.3, спад 0.1 за кадр),
 состояния (запись — `thinking` с громкостью, ожидание микрофона и распознавание — `idle`).
 У notetaker орб компактный (40 pt), его пилюля не меняется. С Reduce Motion или без Metal —
 штатные полоски и размеры.
 
 ### Место появления
 
-Settings → App → «Capsule position»: снизу по центру (как в upstream), снизу слева,
+Settings → Capsule → «Capsule position»: снизу по центру (как в upstream), снизу слева,
 снизу справа, над указателем мыши. «Над указателем» выбирается в момент появления капсулы
 и не следует за мышью, пока капсула видна. Чтобы капсула не висела в покое, выключить
 «Floating recording capsule» — тогда она появляется только на время диктовки и созвона.
