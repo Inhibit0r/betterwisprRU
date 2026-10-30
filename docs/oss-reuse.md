@@ -24,17 +24,42 @@ as a SwiftPM dependency to run NVIDIA Parakeet TDT on the Neural Engine. No
 FluidAudio source is copied. Models load with `AsrModels.loadLocal`, which never
 fetches missing files; downloads only run from an explicit model installation.
 
-`Sources/BetterWisprCore/Speech/SpeakerDetection.swift` uses FluidAudio's
-`OfflineDiarizerManager` to tell meeting speakers apart. FluidAudio's own
-`OfflineDiarizerModels.load` downloads missing models and downloads again after a
-failed load, so BetterWispr loads the four Core ML models itself.
-`SpeakerDetection.pldaPsi(from:)` adapts the PLDA parameter parsing of FluidAudio
-0.17.5's private `OfflineDiarizerModels.loadPLDAPsi` (Apache-2.0, license shipped
-in the app bundle), rewritten with `Decodable`. The weights are FluidInference's
-Core ML conversion of pyannote speaker-diarization-community-1, which pyannote
-publishes under CC-BY-4.0; the conversion's Hugging Face card lists its license as
-"other". BetterWispr does not bundle them; they download only from the explicit
-Speaker detection installation.
+`Sources/BetterWisprCore/Speech/SpeakerDetection.swift` uses SpeakerKit from
+[argmax-oss-swift](https://github.com/argmaxinc/argmax-oss-swift) 1.1.0 (MIT,
+license and notices shipped in the app bundle) as a SwiftPM dependency to tell
+meeting speakers apart. No SpeakerKit source is copied. It loads with
+`download: false`, so a missing or damaged model fails instead of downloading.
+The weights are Argmax's Core ML conversion of pyannote
+speaker-diarization-community-1, from
+[argmaxinc/speakerkit-coreml](https://huggingface.co/argmaxinc/speakerkit-coreml)
+at revision `556fc52a13327837688f02289457cded017802e9`, published under
+CC-BY-4.0. Each model folder's README links the original weights' license:
+pyannote segmentation-3.0, WeSpeaker and VBx. BetterWispr does not bundle them;
+they download only from the explicit Speaker detection installation. Remember
+named voices stores the speaker embeddings these models compute in `Voices.json`
+on the user's Mac. CC-BY-4.0 sets conditions on sharing the licensed material,
+and BetterWispr shares neither the weights nor the embeddings. Its comparison
+of embeddings, Euclidean distance after scaling to unit length against
+SpeakerKit's default clustering threshold of 0.6, is written in BetterWispr and
+copies no SpeakerKit source.
+
+`Sources/BetterWisprCore/Notes/LlamaEngine.swift` uses
+[llama.swift](https://github.com/mattt/llama.swift) 2.10549.0 (MIT, copyright
+2025 Mattt) as a SwiftPM dependency for its `LlamaSwift` module. That package
+wraps the prebuilt
+[llama.cpp](https://github.com/ggml-org/llama.cpp) release `b10549`
+xcframework (MIT, copyright 2023-2026 The ggml authors), which
+`scripts/build-app.sh` embeds as `llama.framework`. Neither project's source is
+copied; BetterWispr calls the llama.cpp C API directly. llama.swift's license
+comes from its checkout, and llama.cpp's, which the xcframework does not carry,
+is kept at `Resources/Licenses/llama.cpp-MIT.txt` as published at tag `b10549`.
+Both ship in the app bundle. The weights are `Qwen3.5-2B-Q4_K_M.gguf` from
+[unsloth/Qwen3.5-2B-GGUF](https://huggingface.co/unsloth/Qwen3.5-2B-GGUF) at
+revision `f6d5376be1edb4d416d56da11e5397a961aca8ae`, a quantization of
+[Qwen/Qwen3.5-2B](https://huggingface.co/Qwen/Qwen3.5-2B). Its model card lists
+Apache-2.0 and links Qwen's license. BetterWispr does not bundle the weights;
+they download only from the explicit built-in model installation and are
+checked against a pinned size and SHA-256.
 
 `Sources/BetterWispr/App/AppUpdater.swift` uses
 [Sparkle](https://github.com/sparkle-project/Sparkle) 2.10.0 (MIT) as a SwiftPM
@@ -43,11 +68,14 @@ the app bundle. `scripts/build-app.sh` removes Sparkle's XPC services because
 they exist only for sandboxed apps and BetterWispr is not sandboxed.
 
 Local sound files can be installed in
-`~/Library/Application Support/BetterWispr/SoundOverrides/` as `finished.wav`,
-`cancelled.wav` and `attention.wav`. Missing cues are silent;
-there is no bundled or system-sound fallback. These user-local files are not
-copied into app bundles or distributed by this project. The previous generated
-and Kenney sound packs have been removed.
+`~/Library/Application Support/BetterWispr/SoundOverrides/` as `started.wav`,
+`finished.wav`, `cancelled.wav` and `attention.wav`. A cue without an override
+plays a macOS system sound loaded by name from `/System/Library/Sounds`: the
+one picked in Settings, or `Tink`, `Purr`, `Bottle` and `Basso` by default. The
+picker lists that folder's file names at runtime and saves only the names;
+nothing is copied into the repository or the app bundle. These user-local
+override files are not copied into app bundles or distributed by this project. The previous generated and Kenney
+sound packs have been removed.
 
 `scripts/release.sh` follows the separate-architecture signing and notarization
 workflow in the sibling BetterShot project's `scripts/release.sh`
@@ -273,6 +301,7 @@ the VoiceInk code adapted elsewhere is listed in the entries above.
 
 | Project | Upstream terms | Use in this project / useful pattern |
 | --- | --- | --- |
+| [codex-asr](https://github.com/Wangnov/codex-asr) | [MIT](https://github.com/Wangnov/codex-asr/blob/479f6a7/LICENSE-MIT) | Native Swift adaptation of file-backed ChatGPT authentication, JWT account fallback, multipart transcription, and Codex Desktop request headers from version 0.1.2, revision `479f6a7`. `CodexSpeechProvider.swift` uses URLSession directly. No Rust runtime, helper, server, credential refresh, or proxy subprocess is included. The upstream MIT notice is retained in `Resources/Licenses/codex-asr-MIT.txt` and copied into the app bundle by `scripts/build-app.sh`. |
 | [WhisperKit / Argmax OSS](https://github.com/argmaxinc/argmax-oss-swift) | [MIT](https://github.com/argmaxinc/argmax-oss-swift/blob/main/LICENSE); bundled third-party notices also apply | Native Swift on-device inference; use the OSS library rather than copying an entire app. The old WhisperKit repository URL redirects here. Argmax Pro is a separate product and is not included. |
 | [FluidAudio](https://github.com/FluidInference/FluidAudio) | [Apache-2.0](https://github.com/FluidInference/FluidAudio/blob/main/LICENSE) | Core ML Parakeet TDT inference, used for the Parakeet models. |
 | [whisper.cpp](https://github.com/ggml-org/whisper.cpp) | [MIT](https://github.com/ggml-org/whisper.cpp/blob/master/LICENSE) | Local C/C++ inference and CLI integration; useful for a separately installed local engine and GGML models. |
@@ -284,6 +313,7 @@ the VoiceInk code adapted elsewhere is listed in the entries above.
 | [Recap](https://github.com/RecapAI/Recap) | MIT | Native meeting summaries reviewed for product shape. No source copied. |
 | [anarlog (formerly Hyprnote)](https://github.com/fastrepl/anarlog) | MIT | Rust meeting notes app, reference only. Its short pause-ended chunks informed the 3 to 20 second meeting chunks. No source copied. |
 | [Meetily](https://github.com/Zackriya-Solutions/meetily) | MIT | Rust meeting minutes app, reference only. No source copied. |
+| [yt-dlp](https://github.com/yt-dlp/yt-dlp) | Unlicense | Fetches the audio of a pasted link for the Transcribe page and `BetterWisprCLI --media`. Not bundled. The `yt-dlp_macos` release binary is downloaded at runtime only when the user installs or updates it, and is checked against the release's `SHA2-256SUMS`. No source copied. |
 
 The research table is not the dependency lock file: the actual compiled versions
 are recorded in `Package.swift` and `Package.resolved`, and a separately installed

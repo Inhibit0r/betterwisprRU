@@ -3,24 +3,31 @@ import SwiftUI
 
 struct NotesModelPicker: View {
     @Bindable var model: AppModel
+    var title = "Notes provider"
+    var overrideSelection: WritableKeyPath<AppSettings, NotesModelSelection?>?
 
     var body: some View {
-        Picker("Notes provider", selection: Binding(get: { model.settings.notesSelection }, set: { model.selectNotesModel($0) })) {
-            Text("Apple Intelligence · On this Mac").tag(NotesModelSelection.apple)
+        Picker(title.localized, selection: Binding(get: { selection }, set: { select($0) })) {
+            if overrideSelection != nil { Text("Same as notes · \(model.settings.notesModelName)").tag(NotesModelSelection?.none) }
+            Text("Apple Intelligence · On this Mac").tag(NotesModelSelection?.some(.apple))
+            if model.meetings.builtInModelInstalled || selection == .builtIn {
+                Text(model.meetings.builtInModelInstalled ? String(localized: "Built-in · \(BuiltInModel.displayName) · On this Mac") : String(localized: "Built-in · Not downloaded"))
+                    .tag(NotesModelSelection?.some(.builtIn))
+            }
             ForEach(NotesCLI.allCases, id: \.self) { cli in
-                Text("\(cli.name) · Subscription").tag(NotesModelSelection.cli(cli))
+                Text("\(cli.name) · Subscription").tag(NotesModelSelection?.some(.cli(cli)))
             }
             ForEach(ollamaModels, id: \.self) { name in
-                Text("Ollama · \(name)").tag(NotesModelSelection.ollama(name))
+                Text("Ollama · \(name)").tag(NotesModelSelection?.some(.ollama(name)))
             }
             ForEach(model.settings.notesConnections) { connection in
-                Text("\(connection.name) · \(connection.modelID)").tag(NotesModelSelection.connection(connection.id))
+                Text("\(connection.name) · \(connection.modelID)").tag(NotesModelSelection?.some(.connection(connection.id)))
             }
-            if let id = model.settings.notesConnectionID, !model.settings.notesConnections.contains(where: { $0.id == id }) {
-                Text("Missing notes connection").tag(NotesModelSelection.connection(id))
+            if case .connection(let id) = selection, !model.settings.notesConnections.contains(where: { $0.id == id }) {
+                Text("Missing notes connection").tag(NotesModelSelection?.some(.connection(id)))
             }
         }
-        if case .cli(let cli) = model.settings.notesSelection {
+        if case .cli(let cli) = selection, overrideSelection == nil || model.settings.notesSelection != .cli(cli) {
             let models = model.notesCLICatalogs[cli]?.models ?? []
             Picker("\(cli.name) model", selection: Binding(
                 get: { model.settings.cliModel(cli) },
@@ -39,9 +46,22 @@ struct NotesModelPicker: View {
         }
     }
 
+    private var selection: NotesModelSelection? {
+        guard let overrideSelection else { return model.settings.notesSelection }
+        return model.settings[keyPath: overrideSelection]
+    }
+
+    private func select(_ selection: NotesModelSelection?) {
+        if let overrideSelection {
+            model.selectNotesModel(selection, for: overrideSelection)
+        } else if let selection {
+            model.selectNotesModel(selection)
+        }
+    }
+
     private var ollamaModels: [String] {
         let installed = model.meetings.ollamaModels
-        guard let saved = model.settings.notesModel, !installed.contains(saved) else { return installed }
+        guard case .ollama(let saved) = selection, !installed.contains(saved) else { return installed }
         return installed + [saved]
     }
 }
@@ -91,6 +111,10 @@ struct NotesModelSettings: View {
         if case .unavailable(let reason) = model.meetings.notesAvailability {
             Text(reason.localized).font(.callout).foregroundStyle(.secondary)
         }
+        NotesModelPicker(model: model, title: "Ask provider", overrideSelection: \.askSelection)
+            .disabled(testing)
+        Text("Ask sends the most relevant transcript lines and thoughts from the meetings you ask about to this model.")
+            .font(.caption).foregroundStyle(.secondary)
         // A view task cancels the request or CLI when this page is closed or Cancel is clicked.
         Color.clear.frame(height: 0)
             .task { await model.meetings.refreshOllamaModels() }

@@ -6,9 +6,11 @@
 
 **Free, open-source voice dictation for macOS.** Hold **⌥ Space**, speak, release, and the text lands in whatever app you were typing in.
 
-BetterWispr is a private, offline speech-to-text app and an open-source alternative to Wispr Flow. It transcribes on your Mac with Whisper, NVIDIA Parakeet or Apple's on-device speech recognition, so your voice never leaves your computer unless you add an API connection yourself.
+BetterWispr is a private, offline speech-to-text app and an open-source alternative to Wispr Flow. It transcribes on your Mac with Whisper, NVIDIA Parakeet or Apple's on-device speech recognition, so your voice never leaves your computer unless you explicitly select an API connection or Codex subscription transcription.
 
 [Download the latest release](https://github.com/opennookorg/betterwispr/releases/latest) · [Website](https://betterwispr.com) · [Changelog](CHANGELOG.md)
+
+[![Buy me a coffee](https://shieldcn.dev/badge/Buy%20me%20a%20coffee-Support-FFDD00.svg?logo=buymeacoffee&variant=branded)](https://buymeacoffee.com/code_kartik)
 
 </div>
 
@@ -20,6 +22,9 @@ BetterWispr is a private, offline speech-to-text app and an open-source alternat
 - **Learns your corrections**: fix a misheard word once (in History, or right after it's pasted) and it's spelled right next time.
 - **Voice commands**: say "comma", "new line", "scratch that" or "sorry, remove that", and "at the rate KV" for "@KV".
 - **Meetings**: live transcript of you and the other side, plus on-device titles, summaries and action items with Apple Intelligence or a local Ollama model.
+- **Transcribe files and links**: drop in an audio or video file or paste a video link and get a timestamped transcript with the model you choose, to copy or export as text or Markdown. Links use yt-dlp, which BetterWispr installs only when you click Install.
+- **Connected apps**: let Claude, Cursor and other apps that support MCP list, search and read your meeting notes and transcripts. Off by default and read-only.
+- **Send to Claude**: optionally press Return after pasting, only into Claude Desktop or Claude Code in the VS Code panel, Terminal or iTerm2. Off by default.
 - **History**: raw and corrected transcripts, stored locally (can be turned off).
 - **Bring your own model**: optional Sarvam AI, Smallest AI or any OpenAI-compatible endpoint.
 
@@ -38,7 +43,7 @@ BetterWispr is a private, offline speech-to-text app and an open-source alternat
 
 If paste can't safely reach the previous app, the text is copied to your
 clipboard instead, so you never lose a dictation. Recordings stop automatically
-after two minutes.
+after ten minutes, with a countdown in the last 30 seconds.
 
 ## Bring your own model
 
@@ -58,10 +63,15 @@ falls back to a cloud provider on its own.
 
 ## Privacy
 
+For optional subscription transcription, see [Codex subscription setup](docs/codex-subscription.md). BetterWispr uses your local Codex sign-in directly with an unofficial ChatGPT endpoint. Audio goes to ChatGPT only when you select this model and start transcription.
+
 - Settings, vocabulary and history live in `~/Library/Application Support/BetterWispr/workspace.json` (not encrypted).
 - Models live in the `Models` folder next to it.
+- With Remember named voices on, voice profiles of the speakers you name live in `Voices.json` next to it (not encrypted). Forget Voices in Models deletes them, and deleting a meeting deletes the profiles named in it.
 - Audio is written to temporary files and deleted after each recording.
 - Built-in models only touch the network when you explicitly download one.
+- Send to Claude is off by default. When it is on, BetterWispr reads the list of running processes on this Mac to find Claude Code, and asks Terminal and iTerm2 which tab is in front once you allow it. Nothing is stored or sent.
+- Connected apps is off by default. When you turn it on, apps you connect read your meetings through `BetterWispr --mcp` on this Mac and send what they read to their own AI provider.
 
 ## Troubleshooting
 
@@ -72,6 +82,12 @@ falls back to a cloud provider on its own.
 ## Contributing
 
 Build instructions, project layout and guidelines are in [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## Star history
+
+<p align="center">
+  <a href="https://www.star-history.com/#opennookorg/betterwispr&Date"><picture><source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=opennookorg/betterwispr&type=Date&theme=dark" /><img alt="Star history of opennookorg/betterwispr" src="https://api.star-history.com/svg?repos=opennookorg/betterwispr&type=Date" /></picture></a>
+</p>
 
 ## License
 

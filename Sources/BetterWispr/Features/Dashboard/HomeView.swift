@@ -133,7 +133,7 @@ private struct DictationPanel: View {
         .frame(minHeight: 120)
         .background {
             ZStack {
-                Color.cardFill
+                Rectangle().fill(.cardFill)
                 RadialGradient(
                     colors: [(recording ? Color.red : .accentColor).opacity(recording ? 0.22 : 0.12), .clear],
                     center: .topLeading, startRadius: 0, endRadius: 420
@@ -151,7 +151,7 @@ private struct DictationPanel: View {
         case .recording: "Listening…"
         case .preparing: "Getting ready…"
         case .transcribing: "Transcribing…"
-        case .idle, .failed, .unpasted, .cancelled, .completed: greeting
+        case .idle, .failed, .unpasted, .cancelled, .completed, .sending: greeting
         }
     }
 
@@ -389,16 +389,23 @@ private struct RecentRow: View {
 
 private struct SetupTiles: View {
     let model: AppModel
+    @State private var subscriptionSignedIn = false
 
     var body: some View {
         let speech = model.selectedModel
         let installed = model.isModelInstalled(speech)
+        let signInMissing = speech.engine == .codex && !subscriptionSignedIn
         let onOlderParakeet = ["parakeet-v3", "parakeet-v2"].contains(speech.id)
+        let speechDetail = if speech.processingLocation.isOnDevice {
+            installed ? (onOlderParakeet ? "Try Parakeet Ultra" : "Runs on this Mac") : "Not downloaded yet"
+        } else {
+            signInMissing ? String(localized: "Sign in with codex login in Terminal") : speech.connection.map { String(localized: "Sends audio to \($0.endpoint)") } ?? speech.processingLocation.disclosure
+        }
         let tiles = [
             SetupTile(
-                symbol: "cpu", title: "Speech model", value: speech.name,
-                detail: speech.connection.map { String(localized: "Sends audio to \($0.endpoint)") } ?? (installed ? (onOlderParakeet ? String(localized: "Try Parakeet Ultra") : String(localized: "Runs on this Mac")) : String(localized: "Not downloaded yet")),
-                ready: installed
+                symbol: speech.processingLocation.isOnDevice ? "cpu" : "network", title: "Speech model", value: speech.name,
+                detail: speechDetail,
+                ready: installed && !signInMissing
             ) { model.selectedPage = .models },
             SetupTile(
                 symbol: "mic", title: "Microphone", value: microphoneName,
@@ -415,6 +422,10 @@ private struct SetupTiles: View {
         ViewThatFits(in: .horizontal) {
             HStack(spacing: 12) { ForEach(tiles, id: \.title) { $0.frame(minWidth: 168, idealWidth: 168) } }
             VStack(spacing: 12) { ForEach(tiles, id: \.title) { $0 } }
+        }
+        .task(id: speech.id) { subscriptionSignedIn = CodexSpeechProvider.isSignedIn }
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+            subscriptionSignedIn = CodexSpeechProvider.isSignedIn
         }
     }
 
@@ -463,7 +474,7 @@ private struct SetupTile: View {
             }
             .padding(14)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(hovering ? Color.primary.opacity(0.07) : .cardFill, in: .rect(cornerRadius: 12, style: .continuous))
+            .background(hovering ? AnyShapeStyle(Color.primary.opacity(0.07)) : AnyShapeStyle(.cardFill), in: .rect(cornerRadius: 12, style: .continuous))
             .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(Color.cardStroke))
             .contentShape(.rect(cornerRadius: 12))
         }

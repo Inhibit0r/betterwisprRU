@@ -32,24 +32,46 @@ import Testing
     let settings = try JSONDecoder().decode(AppSettings.self, from: Data(saved.utf8))
     #expect(settings.selectedModelID == "parakeet-v3")
     #expect(settings.dictationMode == .hold)
+    #expect(settings.unloadModelWhenIdle == .never)
     #expect(!settings.copyToClipboard)
     #expect(settings.soundEffects)
+    #expect(!settings.hideCapsuleWhileDictating)
+    #expect(DictationSound.allCases.map(settings.soundName) == ["Tink", "Purr", "Bottle", "Basso"])
+    #expect(!settings.pauseMediaWhileDictating)
     #expect(!settings.showInDock)
     #expect(settings.theme == .dark)
     #expect(settings.shortcut == .optionSpace)
+    #expect(settings.cancelShortcut == nil)
+    #expect(settings.selectedTextShortcut == nil)
     #expect(settings.microphone == nil)
     #expect(settings.completedOnboardingVersion == 0)
     #expect(settings.onboardingStep == 0)
     var toggled = settings
     toggled.dictationMode = .toggle
+    toggled.unloadModelWhenIdle = .fifteenMinutes
     toggled.completedOnboardingVersion = 1
     toggled.onboardingStep = 2
     toggled.copyToClipboard = true
     toggled.soundEffects = false
+    toggled.hideCapsuleWhileDictating = true
+    toggled.sounds = [.started: "Pop", .attention: "Funk"]
+    toggled.pauseMediaWhileDictating = true
     toggled.showInDock = true
     toggled.theme = .system
     toggled.microphone = AudioInputDevice(id: "AppleUSBAudioEngine:Shure:MV7:1", name: "Shure MV7")
+    toggled.cancelShortcut = DictationShortcut(keyCode: 53, modifiers: .control, key: "Esc")
+    toggled.selectedTextShortcut = DictationShortcut(keyCode: 8, modifiers: [.control, .option], key: "C")
     #expect(try JSONDecoder().decode(AppSettings.self, from: JSONEncoder().encode(toggled)) == toggled)
+}
+
+@Test func pickedDictationSoundsSaveByCueAndOtherCuesKeepTheirDefault() throws {
+    var settings = AppSettings()
+    settings.sounds[.finished] = "Glass"
+    let saved = try JSONSerialization.jsonObject(with: JSONEncoder().encode(settings)) as? [String: Any]
+    #expect(saved?["sounds"] as? [String: String] == ["finished": "Glass"])
+    let loaded = try JSONDecoder().decode(AppSettings.self, from: JSONEncoder().encode(settings))
+    #expect(loaded.soundName(for: .finished) == "Glass")
+    #expect(loaded.soundName(for: .started) == "Tink")
 }
 
 @Test func microphoneIsTheChosenDeviceWhileConnectedOtherwiseTheMacOSDefaultIncludingBluetooth() {
@@ -102,7 +124,7 @@ import Testing
     }
 }
 
-@Test(arguments: [54, 55, 56, 58, 59, 60, 61, 62])
+@Test(arguments: [54, 55, 56, 58, 59, 60, 61, 62, 63])
 func standaloneModifiersRoundTripThroughSettings(keyCode: UInt32) throws {
     var settings = AppSettings()
     settings.shortcut = try #require(DictationShortcut(keyCode: keyCode, modifiers: [], key: "Modifier"))
@@ -409,6 +431,11 @@ func standaloneModifiersRoundTripThroughSettings(keyCode: UInt32) throws {
     #expect(try JSONDecoder().decode(AppSettings.self, from: settings).learnCorrections)
     settings = try JSONEncoder().encode(VocabularyEntry(phrase: "kv", replacement: "KV", learned: true))
     #expect(try JSONDecoder().decode(VocabularyEntry.self, from: settings).learned)
+}
+
+@Test func workspaceSavedBeforeTheCancelShortcutDecodesItAsNone() throws {
+    let legacy = try jsonDroppingKey(AppSettings(), "cancelShortcut")
+    #expect(try JSONDecoder().decode(AppSettings.self, from: legacy).cancelShortcut == nil)
 }
 
 private func jsonDroppingKey(_ value: some Encodable, _ key: String) throws -> Data {

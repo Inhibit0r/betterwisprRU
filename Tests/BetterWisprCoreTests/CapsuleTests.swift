@@ -4,18 +4,62 @@ import Testing
 @testable import BetterWisprCore
 @testable import BetterWispr
 
-@Test func localSoundsNeverFallBackToAnotherPack() throws {
+@Test(arguments: DictationSound.allCases) @MainActor func everyCuePlaysItsPickedSystemSoundOrFallsBackToItsDefault(cue: DictationSound) throws {
+    let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+    #expect(cue.url(in: directory) == nil)
+    #expect(DictationSound.systemSoundNames.contains(cue.defaultSoundName))
+    #expect(try #require(cue.sound(named: AppSettings().soundName(for: cue), in: directory)).name == cue.defaultSoundName)
+    #expect(try #require(cue.sound(named: "Glass", in: directory)).name == "Glass")
+    #expect(try #require(cue.sound(named: "No Such Sound", in: directory)).name == cue.defaultSoundName)
+}
+
+@Test @MainActor func overrideFileWinsOverThePickedSoundAndABrokenOverrideStaysSilent() throws {
     let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
     defer { try? FileManager.default.removeItem(at: directory) }
-    #expect(DictationSound.finished.url(in: directory) == nil)
     try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
     #expect(DictationSound.finished.url(in: directory) == nil)
     let custom = directory.appendingPathComponent("finished.wav")
-    try Data().write(to: custom)
+    try Data(contentsOf: URL(fileURLWithPath: "/System/Library/Sounds/Glass.aiff")).write(to: custom)
     #expect(DictationSound.finished.url(in: directory) == custom)
-    #expect(DictationSound.attention.url(in: directory) == nil)
-    try FileManager.default.removeItem(at: directory)
-    #expect(DictationSound.finished.url(in: directory) == nil)
+    let override = try #require(DictationSound.finished.sound(named: "Ping", in: directory))
+    #expect(override.name == nil)
+    #expect(DictationSound.attention.sound(named: "Ping", in: directory)?.name == "Ping")
+    try Data().write(to: custom)
+    #expect(DictationSound.finished.sound(named: "Ping", in: directory) == nil)
+}
+
+@Test @MainActor func hiddenCapsuleStaysAwayWhileDictatingButReturnsForTheLimitWarningAndCards() {
+    let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+    let model = AppModel(store: LocalStore(directory: folder), startsServices: false)
+    defer {
+        model.phase = .idle
+        try? FileManager.default.removeItem(at: folder)
+    }
+    model.settings.showCapsule = false
+    model.phase = .recording
+    var presentations = 0
+    model.onPresentationChange = { presentations += 1 }
+    model.advanceRecording(to: AudioRecorder.maximumDuration - 30)
+    #expect(model.showsCapsule && presentations == 0)
+    model.advanceRecording(to: 0)
+    model.settings.hideCapsuleWhileDictating = true
+    #expect(!model.showsCapsule)
+
+    model.advanceRecording(to: AudioRecorder.maximumDuration - 31)
+    #expect(model.recordingSecondsLeft == nil && !model.showsCapsule && presentations == 0)
+    model.advanceRecording(to: AudioRecorder.maximumDuration - 30)
+    #expect(model.recordingSecondsLeft == 30 && model.showsCapsule && presentations == 1)
+    model.advanceRecording(to: AudioRecorder.maximumDuration - 12)
+    #expect(model.recordingSecondsLeft == 12 && presentations == 1)
+
+    model.phase = .transcribing
+    #expect(!model.showsCapsule)
+    model.phase = .cancelled
+    #expect(model.showsCapsule)
+    model.phase = .failed(DictationFailure(title: "Couldn’t start dictation.", message: "Microphone access is off."))
+    #expect(model.showsCapsule)
+    model.phase = .idle
+    #expect(!model.showsCapsule)
 }
 
 @Test @MainActor func capsuleHoverTracksEachControlAcrossExpansionAndExit() {
@@ -141,6 +185,35 @@ import Testing
     #expect(model.phase == .idle)
 }
 
+@Test @MainActor func cancelShortcutArmsOnceWhenADictationTurnsBusyAndDisarmsOnceWhenItStops() throws {
+    let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+    try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+    defer { try? FileManager.default.removeItem(at: folder) }
+    let model = AppModel(store: LocalStore(directory: folder), startsServices: false)
+    model.settings.soundEffects = false
+    model.settings.autoPaste = false
+    model.settings.copyToClipboard = false
+    defer { model.discardRecording() }
+    var armed: [Bool] = []
+    model.onBusyChange = { armed.append($0) }
+
+    model.toggleRecording()
+    #expect(model.phase == .preparing && armed == [true])
+    model.phase = .recording
+    model.phase = .transcribing
+    model.cancelRecording()
+    let url = folder.appendingPathComponent("cancelled.caf")
+    try Data("synthetic busy edge check".utf8).write(to: url)
+    model.transcribe(DictationRecording(
+        audio: RecordedAudio(url: url, duration: 1, hasSpeech: true), model: model.selectedModel,
+        settings: model.settings, vocabulary: [], target: nil))
+    model.cancelRecording()
+    model.undoCancellation()
+    model.discardRecording()
+    model.dismissCard()
+    #expect(armed == [true, false, true, false, true, false])
+}
+
 @Test @MainActor func darkIsTheDefaultThemeAndEachThemeSetsTheAppAppearance() throws {
     let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
     defer {
@@ -156,10 +229,44 @@ import Testing
     model.settings.theme = .dark
     model.saveSettings()
     #expect(NSApplication.shared.appearance?.name == .darkAqua)
+    model.settings.theme = .cream
+    model.saveSettings()
+    #expect(NSApplication.shared.appearance?.name == .aqua)
+    #expect(try LocalStore(directory: folder).load().settings.theme == .cream)
     model.settings.theme = .system
     model.saveSettings()
     #expect(NSApplication.shared.appearance == nil)
     #expect(try LocalStore(directory: folder).load().settings.theme == .system)
+}
+
+@Test @MainActor func idleUnloadReleasesTheModelOnlyWhenChosenAndNeverDuringADictation() async throws {
+    let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+    defer { try? FileManager.default.removeItem(at: folder) }
+    let model = AppModel(store: LocalStore(directory: folder), startsServices: false)
+    model.settings.soundEffects = false
+    let apple = try #require(SpeechModel.catalog.first { $0.engine == .apple })
+    model.selectModel(apple, prepared: AppleSpeechProvider())
+
+    model.scheduleIdleUnload(after: .milliseconds(20))
+    try await Task.sleep(for: .milliseconds(150))
+    #expect(model.isSpeechModelLoaded)
+
+    model.settings.unloadModelWhenIdle = .fiveMinutes
+    model.scheduleIdleUnload(after: .milliseconds(50))
+    model.phase = .recording
+    model.scheduleIdleUnload(after: .milliseconds(20))
+    try await Task.sleep(for: .milliseconds(150))
+    #expect(model.isSpeechModelLoaded)
+
+    model.phase = .idle
+    model.scheduleIdleUnload(after: .milliseconds(20))
+    try await Task.sleep(for: .milliseconds(150))
+    #expect(!model.isSpeechModelLoaded)
+
+    model.scheduleIdleUnload(after: .milliseconds(20))
+    model.selectModel(apple, prepared: AppleSpeechProvider())
+    try await Task.sleep(for: .milliseconds(150))
+    #expect(model.isSpeechModelLoaded)
 }
 
 @Test @MainActor func meetingPromptAppearsOncePerCallAndNeverAlongsideTheNotetaker() {
@@ -180,10 +287,97 @@ import Testing
 
     detector.update([meet], recording: [meet.appID])
     #expect(detector.meeting == meet)
-    model.meetings.activity = .recording(UUID())
+    let earlier = UUID()
+    model.meetings.runs[earlier] = MeetingRun(meetingID: earlier, phase: .recording)
     detector.update([meet], recording: [meet.appID])
     #expect(detector.meeting == nil)
-    model.meetings.activity = .idle
+    model.meetings.runs = [:]
     detector.update([meet], recording: [meet.appID])
     #expect(detector.meeting == nil)
+
+    model.meetings.runs[earlier] = MeetingRun(meetingID: earlier, phase: .finishing)
+    detector.update([zoom], recording: [zoom.appID])
+    #expect(detector.meeting == zoom)
+}
+
+@Test @MainActor func escapeStaysArmedWhileASendCountsDownAndHoldingBackEndsIt() throws {
+    let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+    try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+    defer { try? FileManager.default.removeItem(at: folder) }
+    let model = AppModel(store: LocalStore(directory: folder), startsServices: false)
+    var armed: [Bool] = []
+    model.onBusyChange = { armed.append($0) }
+
+    model.phase = .transcribing
+    model.phase = .sending
+    #expect(armed == [true])
+    model.holdBackReturn()
+    #expect(model.phase == .idle && armed == [true, false])
+    model.holdBackReturn()
+    #expect(model.phase == .idle && armed == [true, false])
+}
+
+@Test(arguments: [Duration.milliseconds(120), .milliseconds(250)]) @MainActor
+func pendingSendStaysCancellableThroughTheFinalPromptCheck(delay: Duration) async throws {
+    let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+    defer { try? FileManager.default.removeItem(at: folder) }
+    let model = AppModel(store: LocalStore(directory: folder), startsServices: false)
+    model.settings.soundEffects = false
+    model.settings.sendToClaude = true
+    var checkStarted = false
+    var releaseCheck: CheckedContinuation<Bool, Never>?
+    var notSent = 0
+    model.pressReturn(in: .current, after: delay, using: FocusedAppIntegration(keepsCopy: false),
+                      otherwise: { notSent += 1 }, acceptsPrompt: { _ in
+        checkStarted = true
+        return await withCheckedContinuation { releaseCheck = $0 }
+    })
+    #expect(model.phase == .sending && model.phase.armsCancelShortcut)
+    let deadline = ContinuousClock.now + .seconds(2)
+    while !checkStarted, ContinuousClock.now < deadline { try await Task.sleep(for: .milliseconds(10)) }
+    try #require(checkStarted)
+    try await Task.sleep(for: .milliseconds(50))
+    #expect(model.phase == .sending && model.phase.armsCancelShortcut)
+    model.holdBackReturn()
+    #expect(model.phase == .idle && notSent == 1)
+    releaseCheck?.resume(returning: true)
+    try await Task.sleep(for: .milliseconds(30))
+    #expect(model.phase == .idle && notSent == 1)
+}
+
+@Test @MainActor func disablingSendCancelsAnInFlightPromptCheck() async throws {
+    let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+    defer { try? FileManager.default.removeItem(at: folder) }
+    let model = AppModel(store: LocalStore(directory: folder), startsServices: false)
+    model.settings.soundEffects = false
+    model.settings.sendToClaude = true
+    var releaseCheck: CheckedContinuation<Bool, Never>?
+    var notSent = 0
+    model.pressReturn(in: .current, after: .zero, using: FocusedAppIntegration(keepsCopy: false),
+                      otherwise: { notSent += 1 }, acceptsPrompt: { _ in
+        await withCheckedContinuation { releaseCheck = $0 }
+    })
+    let deadline = ContinuousClock.now + .seconds(2)
+    while releaseCheck == nil, ContinuousClock.now < deadline { try await Task.sleep(for: .milliseconds(10)) }
+    try #require(releaseCheck != nil)
+    model.settings.sendToClaude = false
+    model.saveSettings()
+    #expect(model.phase == .idle && notSent == 1)
+    releaseCheck?.resume(returning: true)
+    try await Task.sleep(for: .milliseconds(30))
+    #expect(model.phase == .idle && notSent == 1)
+}
+
+@Test @MainActor func selectedTextCleanupHoldsBackAPendingSendBeforeStarting() throws {
+    let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+    defer { try? FileManager.default.removeItem(at: folder) }
+    let model = AppModel(store: LocalStore(directory: folder), startsServices: false)
+    model.settings.sendToClaude = true
+    var notSent = 0
+    model.pressReturn(in: .current, after: .seconds(1), using: FocusedAppIntegration(keepsCopy: false),
+                      otherwise: { notSent += 1 }, acceptsPrompt: { _ in false })
+    model.cleanUpSelectedText()
+    #expect(model.phase == .idle && notSent == 1)
+    // Keep the cleanup task from reading the user's actual selection in this test.
+    model.phase = .preparing
 }

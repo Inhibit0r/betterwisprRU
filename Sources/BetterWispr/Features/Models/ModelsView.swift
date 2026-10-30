@@ -1,3 +1,4 @@
+import AppKit
 import BetterWisprCore
 import SwiftUI
 
@@ -6,6 +7,10 @@ struct ModelsView: View {
     @State private var editing: SpeechConnection?
     @State private var error: String?
     @State private var editingNotes = false
+    @State private var forgettingVoices = false
+    @State private var forgetFailure: String?
+    @State private var preparingSubscription = false
+    @State private var subscriptionSignedIn = false
 
     var body: some View {
         Form {
@@ -18,6 +23,14 @@ struct ModelsView: View {
             } footer: {
                 Label("These models process audio on your Mac. Parakeet and Whisper need an internet connection only for installation. Parakeet sizes include the 100 MB phrase booster, which downloads once and is shared.", systemImage: "internaldrive")
                     .foregroundStyle(.secondary)
+            }
+
+            Section {
+                modelRow(.codex)
+            } header: {
+                Text("Subscription transcription")
+            } footer: {
+                Text("Audio goes to ChatGPT using your Codex subscription through an unofficial endpoint. Sign in with codex login in Terminal. Account access and limits can change.")
             }
 
             Section {
@@ -43,6 +56,7 @@ struct ModelsView: View {
             }
 
             Section {
+                builtInModelRow
                 NotesModelSettings(model: model)
                 ForEach(model.settings.notesConnections) { connection in
                     HStack {
@@ -72,15 +86,38 @@ struct ModelsView: View {
             } header: {
                 Text("Meeting notes · Bring your own LLM")
             } footer: {
-                Text("The selected notes model processes the transcript and your thoughts after recording, and whenever you generate a summary. Claude Code and Codex use their signed-in subscriptions. API connections use your key and provider billing. Cloud choices send meeting text to that provider; speech recognition is selected separately. When Auto cleanup in Style is Medium, this model also edits your English dictation.")
+                Text("The selected notes model processes the transcript and your thoughts after recording, and whenever you generate a summary. The built-in model runs on this Mac and needs an internet connection only to download. Claude Code and Codex use their signed-in subscriptions. API connections use your key and provider billing. Cloud choices send meeting text to that provider; speech recognition is selected separately. When Auto cleanup in Style is Medium, this model also edits your English dictation unless you choose another cleanup provider in Style.")
             }
 
             Section {
-                if !SpeakerDetection.isSupported {
-                    LabeledContent("Speaker detection", value: "Needs macOS 15")
-                } else if model.speakerDetectionInstalled {
+                if model.speakerDetectionInstalled {
                     Label("Speaker detection is on. After each meeting, BetterWispr tells the voices on the call apart on this Mac and labels them Speaker 1, Speaker 2 and so on. Rename them above the transcript.", systemImage: "checkmark.circle")
                         .foregroundStyle(.secondary)
+                    Toggle(isOn: setting(\.separateRoomVoices)) {
+                        Text("Tell apart people in the room")
+                        Text("Also separates the voices on your microphone. The voice your microphone hears longest stays Me and the others get their own speaker numbers, so if someone near you talks more than you do, move your lines back to Me. Your microphone audio is kept on this Mac until the speakers are found, then deleted.")
+                    }
+                    Toggle(isOn: setting(\.rememberVoices)) {
+                        Text("Remember named voices")
+                        Text("When you name a speaker, a profile of that voice is saved on this Mac. In later meetings, a speaker who sounds like a saved voice shows that name as a suggestion in its name menu, and no name is filled in until you choose one. Name speakers before you quit BetterWispr, because a meeting’s voices are held only in memory until then. A voice profile can identify a person, so ask people before you name them. Profiles are never uploaded, but Time Machine backs them up. Suggestions use SpeakerKit’s cutoff for grouping voices within one meeting, which wasn’t tuned for matching across meetings.")
+                    }
+                    LabeledContent {
+                        Button("Forget Voices…", role: .destructive) { forgettingVoices = true }
+                    } label: {
+                        Text("Remembered voices")
+                        Text(forgetFailure ?? "Deletes every saved voice profile. Names already in your meetings stay. Deleting a meeting deletes the profiles named in it.")
+                            .foregroundStyle(forgetFailure == nil ? AnyShapeStyle(.secondary) : AnyShapeStyle(.red))
+                    }
+                    .confirmationDialog("Forget every remembered voice?", isPresented: $forgettingVoices) {
+                        Button("Forget Voices", role: .destructive) {
+                            do {
+                                try model.meetings.forgetVoices()
+                                forgetFailure = nil
+                            } catch {
+                                forgetFailure = String(localized: "Couldn’t forget voices. \(error.localizedDescription)")
+                            }
+                        }
+                    }
                 } else {
                     let installation = model.installation?.id == AppModel.speakerDetectionID ? model.installation : nil
                     let installing = installation != nil && installation?.failure == nil
@@ -105,7 +142,7 @@ struct ModelsView: View {
             } header: {
                 Text("Meeting speakers")
             } footer: {
-                Text("Your microphone is always Me. People in the room with you share your microphone and stay part of Me.")
+                Text("Your microphone is Me. People in the room with you stay part of Me unless speaker detection tells them apart.")
             }
 
             Section {
@@ -118,12 +155,46 @@ struct ModelsView: View {
             }
         }
         .formStyle(.grouped)
+        .task { subscriptionSignedIn = CodexSpeechProvider.isSignedIn }
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+            subscriptionSignedIn = CodexSpeechProvider.isSignedIn
+        }
         .sheet(item: $editing) { connection in
             SpeechConnectionEditor(model: model, connection: connection, forNotes: editingNotes)
         }
-        .alert("Couldn’t remove connection", isPresented: Binding(get: { error != nil }, set: { if !$0 { error = nil } })) {
+        .alert("Couldn’t complete action", isPresented: Binding(get: { error != nil }, set: { if !$0 { error = nil } })) {
             Button("OK") { error = nil }
         } message: { Text(error ?? "") }
+    }
+
+    @ViewBuilder private var builtInModelRow: some View {
+        let installation = model.installation?.id == AppModel.builtInModelID ? model.installation : nil
+        let installing = installation != nil && installation?.failure == nil
+        LabeledContent {
+            if installing {
+                Button("Cancel", action: model.cancelInstallation)
+            } else if model.meetings.builtInModelInstalled {
+                Button("Remove", role: .destructive, action: model.removeBuiltInModel)
+                    .disabled(model.isInstalling || !model.canEditConnections)
+            } else {
+                Button(installation == nil ? "Download" : "Retry", action: model.installBuiltInModel)
+                    .disabled(model.isInstalling)
+            }
+        } label: {
+            Text("Built-in model · \(BuiltInModel.displayName)")
+            Text("Writes meeting notes and edits Medium dictation on this Mac, with no app or account to set up. \(BuiltInModel.sizeLabel) download. Uses about 1.5 GB of memory while it works and frees it after five idle minutes.")
+        }
+        if let installation {
+            if installing { ProgressView(value: installation.progress) }
+            Text(installation.failure.map { String(localized: "Download stopped: \($0)") } ?? installation.progressLabel)
+                .font(.caption)
+                .foregroundStyle(installing ? AnyShapeStyle(.secondary) : AnyShapeStyle(.red))
+        }
+    }
+
+    private func setting<Value>(_ keyPath: WritableKeyPath<AppSettings, Value>) -> Binding<Value> {
+        Binding(get: { model.settings[keyPath: keyPath] },
+                set: { model.settings[keyPath: keyPath] = $0; model.saveSettings() })
     }
 
     private func modelRow(_ speechModel: SpeechModel) -> some View {
@@ -131,6 +202,7 @@ struct ModelsView: View {
         let installation = model.installation?.id == speechModel.id ? model.installation : nil
         let installing = installation != nil && installation?.failure == nil
         let installed = model.isModelInstalled(speechModel)
+        let signInMissing = speechModel.engine == .codex && !subscriptionSignedIn
 
         return HStack(alignment: .top, spacing: 12) {
             SymbolTile(
@@ -142,7 +214,7 @@ struct ModelsView: View {
                 HStack(spacing: 6) {
                     Text(speechModel.name).fontWeight(.medium)
                     if selected {
-                        badge("Active", color: .green)
+                        badge(signInMissing ? "Selected · Setup required" : "Active", color: signInMissing ? .orange : .green)
                     } else if speechModel.id == "parakeet-ultra" {
                         badge("Recommended", color: .accentColor)
                     }
@@ -154,6 +226,26 @@ struct ModelsView: View {
                 Text("\(speechModel.sizeLabel.localized) · \(engineLabel(speechModel.engine))")
                     .font(.caption)
                     .foregroundStyle(.tertiary)
+                if signInMissing {
+                    Text("Sign in with codex login in Terminal.")
+                        .font(.caption)
+                        .foregroundStyle(.orange)
+                }
+                if let names = speechModel.languageNames {
+                    if names.count == 1 {
+                        Text(names[0])
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    } else {
+                        DisclosureGroup("\(names.count) languages") {
+                            Text(names.formatted(.list(type: .and)))
+                                .foregroundStyle(.secondary)
+                                .textSelection(.enabled)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        .font(.caption)
+                    }
+                }
                 if let installation {
                     if installing { ProgressView(value: installation.progress).padding(.top, 4) }
                     Text(installation.failure.map { String(localized: "Download stopped: \($0)") } ?? installation.progressLabel)
@@ -164,14 +256,34 @@ struct ModelsView: View {
             Spacer(minLength: 8)
             if installing {
                 Button("Cancel", action: model.cancelInstallation)
-            } else if selected && installed {
+            } else if selected && installed && !signInMissing {
                 Image(systemName: "checkmark.circle.fill")
                     .font(.title3)
                     .foregroundStyle(.green)
                     .accessibilityLabel("Active model")
             } else if installed {
-                Button("Use") { model.selectModel(speechModel) }
-                    .disabled(model.isBusy)
+                Button("Use") {
+                    if speechModel.engine == .codex {
+                        preparingSubscription = true
+                        let selection = model.selectedModel.id
+                        Task {
+                            defer {
+                                preparingSubscription = false
+                                subscriptionSignedIn = CodexSpeechProvider.isSignedIn
+                            }
+                            do {
+                                let provider = speechModel.makeProvider()
+                                try await provider.prepare(model: speechModel, download: false)
+                                guard model.selectedModel.id == selection else { return }
+                                guard !model.isBusy else { throw SpeechError.busy }
+                                model.selectModel(speechModel, prepared: provider)
+                            } catch { self.error = error.localizedDescription }
+                        }
+                    } else {
+                        model.selectModel(speechModel)
+                    }
+                }
+                    .disabled(model.isBusy || preparingSubscription)
             } else {
                 Button(installation == nil ? "Download" : "Retry") { model.installModel(speechModel) }
                     .disabled(model.isInstalling)
@@ -195,6 +307,7 @@ struct ModelsView: View {
         case .whisperKit: "WhisperKit · Apple Silicon"
         case .parakeet: "Parakeet · Neural Engine"
         case .api: "API connection".localized
+        case .codex: "Codex subscription".localized
         }
     }
 }
@@ -214,6 +327,18 @@ private struct SpeechConnectionEditor: View {
                 set: { language = $0 })
     }
 
+    private var preset: Binding<String?> {
+        Binding(get: { NotesAPIPreset.all.first { $0.endpoint == connection.endpoint && $0.modelID == connection.modelID }?.id },
+                set: { id in
+                    let preset = NotesAPIPreset.all.first { $0.id == id }
+                    connection.name = preset?.name ?? connection.name
+                    connection.endpoint = preset?.endpoint ?? connection.endpoint
+                    connection.modelID = preset?.modelID ?? ""
+                    key = ""
+                    error = nil
+                })
+    }
+
     private var original: SpeechConnection? { (forNotes ? model.settings.notesConnections : model.settings.speechConnections).first { $0.id == connection.id } }
     private var canKeepKey: Bool { original?.keychainAccount == connection.keychainAccount }
 
@@ -222,6 +347,12 @@ private struct SpeechConnectionEditor: View {
             Form {
                 Section {
                     if forNotes {
+                        if original == nil {
+                            Picker("Provider", selection: preset) {
+                                Text("Custom").tag(String?.none)
+                                ForEach(NotesAPIPreset.all) { Text($0.name).tag(String?.some($0.id)) }
+                            }
+                        }
                         LabeledContent("API format", value: "OpenAI-compatible chat completions")
                     } else {
                         Picker("Provider", selection: $connection.api) {

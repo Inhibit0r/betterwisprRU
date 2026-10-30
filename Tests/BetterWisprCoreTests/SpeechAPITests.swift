@@ -31,7 +31,7 @@ import Testing
 }
 
 @Test func speechAPIRequestsMatchEachWireFormat() throws {
-    let wav = APISpeechProvider.wav([0, 0.25, -0.25])
+    let wav = SpeechAudio.wav([0, 0.25, -0.25])
     let sarvam = try APISpeechProvider.request(SpeechConnection(api: .sarvam), key: "test-key", wav: wav, language: "hi")
     #expect(sarvam.value(forHTTPHeaderField: "api-subscription-key") == "test-key")
     #expect(sarvam.value(forHTTPHeaderField: "Authorization") == nil)
@@ -58,6 +58,8 @@ import Testing
     try pro.validateLanguage("en")
     #expect(throws: SpeechAPIError.self) { try SpeechConnection(api: .smallest).validateLanguage("ar") }
     try SpeechConnection(api: .smallest).validateLanguage("hi")
+    let tagalog = try APISpeechProvider.request(SpeechConnection(api: .smallest), key: "key", wav: wav, language: "tl")
+    #expect(tagalog.url?.absoluteString == "https://api.smallest.ai/waves/v1/stt/?model=pulse&language=tl")
 
     let custom = try APISpeechProvider.request(SpeechConnection(api: .openAICompatible), key: "", wav: wav, language: nil)
     #expect(custom.value(forHTTPHeaderField: "Authorization") == nil)
@@ -84,7 +86,7 @@ import Testing
         let file = try AVAudioFile(forWriting: url, settings: format.settings)
         try file.write(from: buffer)
     }
-    let chunks = try await APISpeechProvider.audioChunks(url, seconds: 25)
+    let chunks = try await SpeechAudio.wavChunks(url, seconds: 25)
     #expect(chunks.count == 2)
     #expect(chunks.allSatisfy { String(decoding: $0.prefix(4), as: UTF8.self) == "RIFF" })
     #expect(chunks.reduce(0) { $0 + ($1.count - 44) / 2 } == 26 * 16_000)
@@ -94,11 +96,27 @@ import Testing
     #expect(chunks[0][34] == 16)
 }
 
+@Test func speechAPIAcceptsDictationsLongerThanTwoMinutes() async throws {
+    let url = FileManager.default.temporaryDirectory.appending(path: "betterwispr-api-test-\(UUID()).caf")
+    defer { try? FileManager.default.removeItem(at: url) }
+    let format = try #require(AVAudioFormat(standardFormatWithSampleRate: 16_000, channels: 1))
+    let frames: AVAudioFrameCount = 16_000 * 180
+    let buffer = try #require(AVAudioPCMBuffer(pcmFormat: format, frameCapacity: frames))
+    buffer.frameLength = frames
+    do {
+        let file = try AVAudioFile(forWriting: url, settings: format.settings)
+        try file.write(from: buffer)
+    }
+    let chunks = try await SpeechAudio.wavChunks(url, seconds: 125)
+    #expect(chunks.count == 2)
+    #expect(chunks.reduce(0) { $0 + ($1.count - 44) / 2 } == 180 * 16_000)
+}
+
 @MainActor
 @Test func speechAPIUsesThePreparedConnectionAndSurfacesHTTPFailures() async throws {
     let audio = FileManager.default.temporaryDirectory.appending(path: "betterwispr-api-test-\(UUID()).wav")
     defer { try? FileManager.default.removeItem(at: audio) }
-    try APISpeechProvider.wav(Array(repeating: 0.1, count: 1600)).write(to: audio)
+    try SpeechAudio.wav(Array(repeating: 0.1, count: 1600)).write(to: audio)
     for path in ["ok", "unauthorized", "malformed"] {
         var connection = SpeechConnection(api: .openAICompatible)
         connection.endpoint = "https://speech.example/\(UUID())/\(path)"
@@ -121,7 +139,7 @@ import Testing
 func speechAPICancellationStopsAnInFlightRequest(cancelProvider: Bool) async throws {
     let audio = FileManager.default.temporaryDirectory.appending(path: "betterwispr-api-test-\(UUID()).wav")
     defer { try? FileManager.default.removeItem(at: audio) }
-    try APISpeechProvider.wav(Array(repeating: 0.1, count: 1600)).write(to: audio)
+    try SpeechAudio.wav(Array(repeating: 0.1, count: 1600)).write(to: audio)
     var connection = SpeechConnection(api: .openAICompatible)
     let path = "/wait-\(UUID())"
     connection.endpoint = "https://speech.example\(path)"

@@ -9,9 +9,12 @@ public struct ShortcutModifiers: OptionSet, Codable, Hashable, Sendable {
     public static let shift = ShortcutModifiers(rawValue: 1 << 9)
     public static let option = ShortcutModifiers(rawValue: 1 << 11)
     public static let control = ShortcutModifiers(rawValue: 1 << 12)
+    /// Only ever held by a standalone Fn shortcut; Carbon hot keys can't use it.
+    public static let function = ShortcutModifiers(rawValue: 1 << 17)
 
     fileprivate static let names: [(modifier: ShortcutModifiers, symbol: String, spoken: String)] = [
-        (.control, "⌃", "Control"), (.option, "⌥", "Option"), (.shift, "⇧", "Shift"), (.command, "⌘", "Command")
+        (.control, "⌃", "Control"), (.option, "⌥", "Option"), (.shift, "⇧", "Shift"), (.command, "⌘", "Command"),
+        (.function, "fn", "Fn")
     ]
 
     fileprivate var activeNames: [(modifier: ShortcutModifiers, symbol: String, spoken: String)] {
@@ -47,11 +50,21 @@ public struct DictationShortcut: Codable, Equatable, Sendable {
         case kVK_Option, kVK_RightOption: .option
         case kVK_Shift, kVK_RightShift: .shift
         case kVK_Command, kVK_RightCommand: .command
+        case kVK_Function: .function
         default: nil
         }
     }
 
     public var isModifierOnly: Bool { modifiers.isEmpty && Self.modifier(for: keyCode) != nil }
+
+    /// Whether Shift is part of the shortcut, so it can't also mean "paste without pressing Return".
+    public var usesShift: Bool { modifiers.union(Self.modifier(for: keyCode) ?? []).contains(.shift) }
+
+    public var cancelModifiers: [ShortcutModifiers] {
+        let held = modifiers.union(Self.modifier(for: keyCode) ?? []).subtracting(.function)
+        guard !held.isEmpty, !held.contains(.command), keyCode != UInt32(kVK_Escape) else { return [[]] }
+        return [[], held]
+    }
 
     private init(validKeyCode keyCode: UInt32, modifiers: ShortcutModifiers, key: String) {
         self.keyCode = keyCode
@@ -65,7 +78,7 @@ public struct DictationShortcut: Codable, Equatable, Sendable {
                                                modifiers: try container.decode(ShortcutModifiers.self, forKey: .modifiers),
                                                key: try container.decode(String.self, forKey: .key)) else {
             throw DecodingError.dataCorruptedError(forKey: .modifiers, in: container,
-                                                   debugDescription: "A shortcut needs a modifier key alone, Control, Option or Command with a key, or a function key.")
+                                                   debugDescription: "A shortcut needs a modifier key or Fn alone, Control, Option or Command with a key, or a function key.")
         }
         self = shortcut
     }

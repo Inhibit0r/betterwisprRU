@@ -73,11 +73,13 @@ public enum TranscriptPolisher {
         </SYSTEM_INSTRUCTIONS>
         """
 
-    /// Edits English dictation with the notes model chosen in Models; nil means keep the light cleanup.
+    public static let minimumWords = 4
+
+    /// Edits English text with the model that settings selects; nil means keep the light cleanup.
     public static func polish(_ text: String, settings: AppSettings, vocabulary: [String], context: DictationContext?, instructions extra: String = "") async -> String? {
         let words = text.split(whereSeparator: \.isWhitespace).count
         let (system, request) = exchange(text, for: settings.notesSelection, vocabulary: vocabulary, context: context, instructions: extra)
-        guard words >= 4, let model = try? MeetingNotesGenerator.languageModel(settings, instructions: system, lowLatency: true) else { return nil }
+        guard words >= minimumWords, let model = try? MeetingNotesGenerator.languageModel(settings, instructions: system, lowLatency: true) else { return nil }
         let (attempts, timeout) = schedule(for: settings.notesSelection, words: words)
         for attempt in 1...attempts {
             let outcome = await respond(model, to: request, within: timeout)
@@ -92,12 +94,22 @@ public enum TranscriptPolisher {
     /// Characters of prompt, request and reply that fit Apple's 4,096-token window, at a guessed 3 characters a token.
     static let appleBudget = 12_000
 
+    static let builtInBudget = (LlamaEngine.contextLength - LlamaEngine.replyReserve) * 3
+
+    static func budget(for selection: NotesModelSelection) -> Int? {
+        switch selection {
+        case .apple: appleBudget
+        case .builtIn: builtInBudget
+        case .ollama, .connection, .cli: nil
+        }
+    }
+
     /// The model instructions and request; a CLI gets only the fixed instructions because Claude Code receives them on its command line.
     static func exchange(_ text: String, for selection: NotesModelSelection, vocabulary: [String], context: DictationContext?,
                          instructions extra: String) -> (instructions: String, request: String) {
         let framed = prompt(vocabulary: vocabulary, context: DictationContext(selectedText: "x", clipboard: "x", window: "x"), instructions: extra)
-        let room = appleBudget - (framed.count - 3) - message(for: text).count - text.count
-        let sources = sources(vocabulary: vocabulary, context: selection == .apple ? context?.fitting(room) : context, instructions: extra)
+        let room = budget(for: selection).map { $0 - (framed.count - 3) - message(for: text).count - text.count }
+        let sources = sources(vocabulary: vocabulary, context: room.map { context?.fitting($0) } ?? context, instructions: extra)
         if case .cli = selection { return (instructions, (sources + [message(for: text)]).joined(separator: "\n\n")) }
         return (([instructions] + sources).joined(separator: "\n\n"), message(for: text))
     }

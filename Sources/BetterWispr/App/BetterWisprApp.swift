@@ -1,7 +1,7 @@
 import AppKit
+import BetterWisprCore
 import SwiftUI
 
-@main
 struct BetterWisprApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var delegate
 
@@ -22,6 +22,7 @@ struct BetterWisprApp: App {
                 delegate.model.refreshPermissions()
             }
             .frame(minWidth: 760, minHeight: 520)
+            .environment(\.appTheme, delegate.model.settings.theme)
             .animation(.easeInOut(duration: 0.4), value: delegate.model.needsOnboarding)
         }
         .defaultSize(width: 920, height: 680)
@@ -89,11 +90,10 @@ private struct MenuContents: View {
         }
         .disabled(model.phase == .preparing || model.phase == .transcribing)
         if model.isBusy { Button("Cancel") { model.cancelRecording() } }
-        Button(model.meetings.activity.capturingID == nil ? "Start Meeting Notes" : "Stop Meeting") {
-            guard model.meetings.activity.capturingID == nil else { return model.meetings.stop() }
+        Button(model.meetings.capturingID == nil ? "Start Meeting Notes" : "Stop Meeting") {
+            guard model.meetings.capturingID == nil else { return model.meetings.stop() }
             model.startNotetaker()
         }
-        .disabled(model.meetings.activity != .idle && model.meetings.activity.capturingID == nil)
         Divider()
         Picker("Model", selection: Binding(
             get: { model.selectedModel.id },
@@ -129,7 +129,7 @@ private struct MenuContents: View {
         case .recording: "Listening…"
         case .transcribing: "Transcribing…"
         case .preparing: "Preparing…"
-        case .idle, .failed, .unpasted, .cancelled, .completed: "BetterWispr: Ready"
+        case .idle, .failed, .unpasted, .cancelled, .completed, .sending: "BetterWispr: Ready"
         }
     }
 
@@ -167,11 +167,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { false }
+
+    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        model.discardRecording()
+        guard let pending = model.mediaPauser.pending else { return .terminateNow }
+        Task {
+            await pending.value
+            sender.reply(toApplicationShouldTerminate: true)
+        }
+        return .terminateLater
+    }
+
     func applicationWillTerminate(_ notification: Notification) {
         model.discardRecording()
         model.meetings.endForQuit()
+        model.transcriptions.endForQuit()
         capsule?.close()
         notetaker?.close()
+        LlamaEngine.shared.shutdown()
     }
 }
 

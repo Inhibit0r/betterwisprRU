@@ -126,6 +126,27 @@ Customize → Position → «Capsule position»: над указателем м�
 Текущий орб (Prismatic Field):
 <https://lersent001.github.io/orb/#effect=orb-glass-liquid&style=spectrum&glass=1&state=thinking&activation=0.22&transition=0.65&preview=scene&text=Thinking...&speed=1.8&idleSpeed=0.48600000000000004&radius=0.72&contourDeform=0.03&idleContourDeform=0.009&zoom=0.46&idleZoom=0.4232&warp=4.4&idleWarp=1.9360000000000002&ridgeAmt=0.72&idleRidgeAmt=0.2736&sharp=2.2&idleSharp=2.2&bandDensity=2&idleBandDensity=2&metalDepth=0.25&idleMetalDepth=0.25&metalRoughness=0.22&idleMetalRoughness=0.22&chromaticShift=0.42&idleChromaticShift=0.42&metalScale=0.77&metalStretch=0.23&idleMetalStretch=0.23&metalAngle=65&metalOffset=0&metalPhase=0&metalEvolution=1&idleMetalEvolution=1&particleDensity=0.72&ribbonCount=5&ribbonWidth=0.42&idleRibbonWidth=0.42&ribbonTwist=1.25&idleRibbonTwist=1.25&ribbonFold=0.55&idleRibbonFold=0.55&ribbonBreath=0.3&idleRibbonBreath=0.3&particleSize=1.2&particleBloom=0.7&shade=0.06&idleShade=0.06&exposure=1.5&idleExposure=0.9299999999999999&sheen=0.26&gloss=0.24&glassOpacity=0.4&shellMidAlpha=0.18&shellEdgeAlpha=0.18&edgeSoftness=0.005&edgeGlow=0&idleEdgeGlow=0&colorA=%23FFFFFF&idleColorA=%23B4BBC2&colorB=%231677FF&idleColorB=%23285D8F&colorC=%23F249A0&idleColorC=%2391506F&colorD=%2335E6B2&idleColorD=%233F8873&highlightColor=%23FFFFFF&idleHighlightColor=%23D8DDE1&shellInner=%23FFFFFF&shellMid=%2366E8FF&shellEdge=%23D26CFF&sheenColor=%23EAF4FF&specColor=%23DCEAFF&canvasColor=%2303040A&glowColor=%231677FF&idleGlowColor=%23386789>
 
+## Русский интерфейс
+
+С 30.10.2026 ветка `orb` стоит на `main` upstream (0.1.6 до релиза), а не на теге, и несёт перевод:
+
+- `Resources/ru.lproj/Localizable.strings` — перевод (ключ = английская строка), `InfoPlist.strings` — тексты
+  окон разрешений; `Resources/en.lproj` и `CFBundleDevelopmentRegion` нужны, чтобы выбор English работал на
+  русской системе. `build-app.sh` копирует все `*.lproj` в бандл.
+- SwiftUI переводит литералы в `Text("…")` сам. Обычные `String` переводятся `.localized`
+  (`App/Localization.swift`) там, где попадают в `Text`, а строки с подстановкой — `String(localized: "…\(x)…")`.
+- Язык выбирается окном при первом запуске (`App/AppLanguage.swift`, ключ `fork.languageChosen`) и в
+  «Оформление → Язык»; смена — через перезапуск.
+
+После вливания релиза upstream новые строки останутся английскими, а правки строк дадут конфликты:
+берите сторону upstream и заново оборачивайте. Какие ключи без перевода, показывает компилятор:
+
+```bash
+swift build --product BetterWispr -Xswiftc -emit-localized-strings \
+  -Xswiftc -emit-localized-strings-path -Xswiftc /tmp/keys
+# ключи — в /tmp/keys/*.stringsdata (JSON); сравнить с ru.lproj/Localizable.strings
+```
+
 ## Раздача DMG
 
 Готовые сборки — в Releases форка, тег `vX.Y.Z-N` (голый `vX.Y.Z` занят тегом upstream и

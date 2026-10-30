@@ -119,23 +119,21 @@ private struct WritingModeEditor: View {
                         Text("Same as app").tag(StyleTone?.none)
                         ForEach(StyleTone.allCases, id: \.self) { Text($0.title).tag(Optional($0)) }
                     }
-                    if (mode.cleanup ?? model.settings.cleanup) == .medium {
-                        if !mode.apps.isEmpty || !mode.websites.isEmpty {
-                            Picker("Screen context", selection: $mode.useScreenContext) {
-                                Text("Same as default (\((model.settings.useScreenContext ? "On" : "Off").localized))").tag(Bool?.none)
-                                Text("On").tag(Optional(true))
-                                Text("Off").tag(Optional(false))
-                            }
+                    if !mode.apps.isEmpty || !mode.websites.isEmpty {
+                        Picker("Screen context", selection: $mode.useScreenContext) {
+                            Text("Same as default (\((model.settings.useScreenContext ? "On" : "Off").localized))").tag(Bool?.none)
+                            Text("On").tag(Optional(true))
+                            Text("Off").tag(Optional(false))
                         }
+                    }
+                    if (mode.cleanup ?? model.settings.cleanup) == .medium {
                         TextField("Instructions", text: instructions, prompt: Text("Use British spelling."), axis: .vertical)
                             .lineLimit(3...8)
                     }
                 } header: {
                     Text("Writing")
                 } footer: {
-                    Text((mode.cleanup ?? model.settings.cleanup) == .medium
-                         ? String(localized: "Instructions go to your notes model with each Medium dictation in this mode. Screen context is read when you start dictating, so it follows this mode’s apps and websites, and a trigger word can turn it off but not on. It sends nearby text to your notes model, which may be a cloud service\(model.settings.recognizeScreenText ? ", and reads the window from a screenshot because Read window text from the screen is on" : "").")
-                         : String(localized: "Choose Medium cleanup to add instructions for your notes model."))
+                    Text(writingFooter.localized)
                 }
 
                 if !isNew {
@@ -170,6 +168,12 @@ private struct WritingModeEditor: View {
         }
     }
 
+    private var writingFooter: String {
+        let screen = String(localized: "With Parakeet and the phrase booster, screen context is read on this Mac when you start dictating, so it follows this mode’s apps and websites, and the names in it fix misspelled English words\(model.settings.recognizeScreenText ? String(localized: ". It may read the window from a screenshot because Read window text from the screen is on") : "").")
+        guard (mode.cleanup ?? model.settings.cleanup) == .medium else { return String(localized: "\(screen) Choose Medium cleanup to add instructions for your cleanup model.") }
+        return String(localized: "Instructions go to your cleanup model with each Medium dictation in this mode. \(screen) Medium also reads it and sends it to your cleanup model, which may be a cloud service, and a trigger word can turn that off but not on.")
+    }
+
     private var instructions: Binding<String> {
         Binding(get: { mode.instructions }, set: { mode.instructions = String($0.prefix(WritingMode.instructionLimit)) })
     }
@@ -190,7 +194,7 @@ private struct WritingModeEditor: View {
             text.wrappedValue = ""
         }
         return HStack {
-            TextField(title, text: text, prompt: Text(prompt))
+            TextField(title.localized, text: text, prompt: Text(prompt.localized))
                 .onSubmit(add)
             Button("Add", action: add)
                 .disabled(text.wrappedValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)

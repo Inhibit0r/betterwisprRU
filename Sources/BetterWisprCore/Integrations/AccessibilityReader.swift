@@ -7,6 +7,12 @@ extension AXUIElement {
         return value as? String
     }
 
+    func strings(_ attribute: String) -> [String] {
+        var value: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(self, attribute as CFString, &value) == .success else { return [] }
+        return value as? [String] ?? []
+    }
+
     func element(_ attribute: String) -> AXUIElement? {
         var value: CFTypeRef?
         guard AXUIElementCopyAttributeValue(self, attribute as CFString, &value) == .success,
@@ -14,7 +20,29 @@ extension AXUIElement {
         return (value as! AXUIElement)
     }
 
+    func elements(_ attribute: String) -> [AXUIElement] {
+        var value: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(self, attribute as CFString, &value) == .success else { return [] }
+        return value as? [AXUIElement] ?? []
+    }
+
+    func bool(_ attribute: String) -> Bool? {
+        var value: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(self, attribute as CFString, &value) == .success else { return nil }
+        return value as? Bool
+    }
+
     var isSecureField: Bool { string(kAXSubroleAttribute) == kAXSecureTextFieldSubrole }
+
+    var selectedText: String? {
+        element(kAXFocusedUIElementAttribute).flatMap { $0.isSecureField ? nil : $0.string(kAXSelectedTextAttribute) }
+    }
+
+    var selectedTextRange: CFRange? {
+        var range = CFRange()
+        guard let value = axValue(kAXSelectedTextRangeAttribute), AXValueGetValue(value, .cfRange, &range) else { return nil }
+        return range
+    }
 
     var frame: CGRect? {
         var origin = CGPoint.zero, size = CGSize.zero

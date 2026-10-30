@@ -7,22 +7,20 @@ struct CapsuleView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var isRecording: Bool { model.phase == .recording }
-    private var isMeetingCapturing: Bool { model.meetings.activity.capturingID != nil }
+    private var isMeetingCapturing: Bool { model.meetings.capturingID != nil }
     private var isNotetaking: Bool { !model.isBusy && isMeetingCapturing }
-    private var isMeetingRecording: Bool {
-        if case .recording = model.meetings.activity { true } else { false }
-    }
+    private var isMeetingRecording: Bool { model.meetings.capturing?.phase == .recording }
     private var failure: DictationFailure? {
         model.failure ?? (model.phase != .idle ? nil : model.meetings.message.map {
             DictationFailure(title: "Notetaker needs attention", message: $0)
         })
     }
     private var meetingPrompt: DetectedMeeting? {
-        model.isBusy || model.meetings.activity != .idle ? nil : model.meetingDetector.meeting
+        model.isBusy || isMeetingCapturing ? nil : model.meetingDetector.meeting
     }
     private var showsCard: Bool {
         switch model.phase {
-        case .cancelled, .completed, .unpasted, .failed: true
+        case .cancelled, .completed, .unpasted, .failed, .sending: true
         default: failure != nil || meetingPrompt != nil
         }
     }
@@ -39,6 +37,7 @@ struct CapsuleView: View {
             if !showsCard, let target = hover.target {
                 tooltip(for: target)
             }
+            RecordingLimitLabel(model: model)
             if model.isBusy, !model.liveTranscript.isEmpty {
                 livePreview
             }
@@ -51,7 +50,7 @@ struct CapsuleView: View {
         .environment(\.colorScheme, .dark)
         .animation(spring, value: model.phase)
         .animation(spring, value: model.isHeldSession)
-        .animation(spring, value: model.meetings.activity)
+        .animation(spring, value: model.meetings.capturing?.phase)
         .animation(spring, value: model.liveTranscript.isEmpty)
         .animation(spring, value: failure)
         .animation(spring, value: meetingPrompt)
@@ -74,6 +73,7 @@ struct CapsuleView: View {
             case .cancelled:
                 AccessibilityNotification.Announcement(model.canUndoCancellation ? "Transcript cancelled. Undo is available for five seconds." : "Transcript cancelled.").post()
             case .completed(let message): AccessibilityNotification.Announcement(message).post()
+            case .sending: AccessibilityNotification.Announcement("Sending. Dictate again to add more first.").post()
             default: break
             }
         }
@@ -89,6 +89,9 @@ struct CapsuleView: View {
                     .transition(swap)
             } else if model.phase == .cancelled {
                 cancellationCard
+                    .transition(swap)
+            } else if model.phase == .sending {
+                sendingCard
                     .transition(swap)
             } else if case .completed(let message) = model.phase {
                 completionCard(message)
@@ -137,6 +140,9 @@ struct CapsuleView: View {
             if target == .microphone {
                 Text(model.settings.shortcut.displayName).fontWeight(.semibold)
             }
+            if target == .dictation {
+                Text("Esc to cancel").foregroundStyle(.secondary)
+            }
         }
         .font(.system(size: 11, weight: .medium))
         .foregroundStyle(.white)
@@ -152,7 +158,7 @@ struct CapsuleView: View {
         switch target {
         case .microphone: "Dictate"
         case .notetaker:
-            isMeetingCapturing ? "Stop notetaker" : model.meetings.activity == .idle ? "Start notetaker" : "Finishing notes…"
+            isMeetingCapturing ? "Stop notetaker" : "Start notetaker"
         case .meetingNotes: "Open meeting notes"
         case .dictation:
             switch model.phase {
@@ -261,6 +267,29 @@ struct CapsuleView: View {
             } else {
                 Button("Dismiss", action: model.dismissCard)
             }
+        }
+        .foregroundStyle(.white)
+        .buttonStyle(CapsuleCardButtonStyle())
+        .padding(.horizontal, 18)
+        .frame(width: 320, height: 56)
+    }
+
+    private var sendingCard: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "return")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(Color(red: 0.55, green: 0.9, blue: 0.7))
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Sending…")
+                    .font(.system(size: 14, weight: .medium))
+                Text("\(model.settings.shortcut.displayName) to add more")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.white.opacity(0.6))
+            }
+            Spacer(minLength: 0)
+            Button("Don’t send", action: model.holdBackReturn)
+                .help("Leave the text pasted without pressing Return")
         }
         .foregroundStyle(.white)
         .buttonStyle(CapsuleCardButtonStyle())
@@ -432,6 +461,14 @@ struct CapsuleView: View {
                     .frame(maxWidth: .infinity)
                     .accessibilityLabel(waveformLabel.localized)
             }
+            if model.pressesReturn {
+                Image(systemName: "return")
+                    .foregroundStyle(.white.opacity(0.75))
+                    .frame(width: 14, height: 24)
+                    .help("Sends after pasting. Hold Shift to paste only.")
+                    .accessibilityLabel("Sends after pasting")
+                    .transition(.opacity)
+            }
             if !model.isHeldSession {
                 Button(action: model.toggleRecording) {
                     Image(systemName: "checkmark")
@@ -450,7 +487,8 @@ struct CapsuleView: View {
         .foregroundStyle(.white)
         .buttonStyle(.plain)
         .padding(.horizontal, 4)
-        .frame(width: model.isHeldSession ? 96 : 108, height: 28)
+        .frame(width: (model.isHeldSession ? 96 : 108) + (model.pressesReturn ? 18 : 0), height: 28)
+        .animation(reduceMotion ? nil : .snappy(duration: 0.2), value: model.pressesReturn)
         .contentShape(Capsule())
         .contextMenu { Button("Cancel dictation", action: model.cancelRecording) }
         .accessibilityActions { Button("Cancel dictation", action: model.cancelRecording) }
@@ -497,10 +535,9 @@ struct CapsuleView: View {
                     .contentShape(Circle())
             }
             .accessibilityLabel("Start notetaker")
-            .disabled(model.meetings.activity != .idle)
             .capsuleRegion(.notetaker)
             Button {
-                if let id = model.meetings.activity.meetingID {
+                if let id = model.meetings.activeMeetingID {
                     model.onShowNotetaker?(id)
                 } else {
                     model.selectedPage = .meetings
@@ -540,6 +577,30 @@ private struct CapsuleCardButtonStyle: ButtonStyle {
     }
 }
 
+/// Counts down the last 30 seconds before dictation finishes at the recording limit.
+private struct RecordingLimitLabel: View {
+    let model: AppModel
+
+    var body: some View {
+        Group {
+            if let secondsLeft = model.recordingSecondsLeft {
+                Text("Stops in \(Duration.seconds(secondsLeft).formatted(.time(pattern: .minuteSecond)))")
+                    .font(.system(size: 11, weight: .medium))
+                    .monospacedDigit()
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background { CapsuleGlass(cornerRadius: 14) }
+                    .allowsHitTesting(false)
+            }
+        }
+        .onChange(of: model.recordingSecondsLeft != nil) { _, warning in
+            guard warning else { return }
+            AccessibilityNotification.Announcement("Dictation stops in 30 seconds.").post()
+        }
+    }
+}
+
 /// Reads the live audio level in its own body so each level update redraws only the bars, not the whole capsule.
 private struct CapsuleWaveform: View {
     let model: AppModel
@@ -553,7 +614,7 @@ private struct CapsuleWaveform: View {
 
     private var mode: Waveform.Mode {
         if isNotetaking {
-            guard case .recording = model.meetings.activity else { return .waiting }
+            guard model.meetings.capturing?.phase == .recording else { return .waiting }
             return .listening(VoiceLevels(values: [max(model.meetings.levels.me, model.meetings.levels.them)]))
         }
         return model.phase == .recording ? .listening(model.voiceLevels) : .waiting
