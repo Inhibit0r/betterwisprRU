@@ -11,7 +11,7 @@ struct OrbWaveform: View {
     @State private var smoothing = LevelSmoothing()
 
     /// The orb overflows the 28 pt pill instead of resizing it, so the upstream layout stays untouched.
-    static let diameter: CGFloat = 40
+    static let diameter: CGFloat = 56
     private static let hasMetal = MTLCreateSystemDefaultDevice() != nil
 
     var body: some View {
@@ -39,12 +39,12 @@ struct OrbWaveform: View {
     }
 }
 
-/// Rises quickly and falls slowly so the orb swells with speech without flickering between words.
+/// Follows syllables like a level meter: jumps up fast, drops back in pauses without flicker.
 private final class LevelSmoothing {
     private var value: Float = 0
 
     func next(_ target: Float) -> Float {
-        value += (target - value) * (target > value ? 0.35 : 0.08)
+        value += (target - value) * (target > value ? 0.55 : 0.2)
         return value
     }
 }

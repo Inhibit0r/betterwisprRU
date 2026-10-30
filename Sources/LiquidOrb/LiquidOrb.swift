@@ -1076,8 +1076,9 @@ metal::float3 glsVoiceWaveFluid(
     float rimEnvelope = metal::pow(metal::max(1.0 - (q_9.x * q_9.x), 0.0), 0.72);
     float drift_3 = t_12 * 0.82;
     float _e24 = u.warp;
-    float amplitude_4 = 0.2 + (_e24 * 0.018);
+    float amplitude_4 = 0.2 + (_e24 * 0.018) + u.particleDensity * 0.3;
     float mainY_2 = rimEnvelope * ((amplitude_4 * metal::sin((q_9.x * 1.48) + drift_3)) + (0.055 * metal::sin(((q_9.x * 3.2) - (drift_3 * 0.43)) + 1.1)));
+    mainY_2 += rimEnvelope * u.particleDensity * 0.07 * metal::sin((q_9.x * 11.0) - (t_12 * 7.0));
     float distance = q_9.y - mainY_2;
     float _e52 = u.ridgeAmt;
     float width = 0.11 + ((1.0 - _e52) * 0.075);
@@ -2014,6 +2015,7 @@ private func applyOrbAudio(_ values: inout [Float], _ bands: LiquidOrbAudio) {
     let strengths: [Int: Float] = [9: 0.8, 10: 0.65, 11: 0.65, 14: 0.75, 19: 1, 21: 0.7]
     guard let strength = strengths[Int(values[15].rounded())] else { return }
     func level(_ value: Float) -> Float { value.isFinite ? max(0, min(1, value)) * strength : 0 }
+    values[32] = level(bands.all)
     if level(bands.all) > 0 { values[3] = min(max(5, values[3]), values[3] * (1 + 0.7 * level(bands.all)) + 0 * level(bands.all)) }
     if level(bands.mid) > 0 { values[6] = min(max(7, values[6]), values[6] * (1 + 0 * level(bands.mid)) + 0.85 * level(bands.mid)) }
     if level(bands.low) > 0 { values[21] = min(max(1, values[21]), values[21] * (1 + 0 * level(bands.low)) + 0.075 * level(bands.low)) }
