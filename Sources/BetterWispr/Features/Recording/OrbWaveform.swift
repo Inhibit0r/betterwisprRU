@@ -12,25 +12,29 @@ struct OrbWaveform: View {
     var compact = false
     @State private var smoothing = LevelSmoothing()
 
-    static let diameter: CGFloat = 72
     private static let compactDiameter: CGFloat = 40
     private static let hasMetal = MTLCreateSystemDefaultDevice() != nil
 
     static func isShown(animated: Bool) -> Bool { animated && hasMetal }
-    /// The orb widens the 28 pt dictation pill past its fixed frame; this padding grows the capsule glass around it
-    /// without touching upstream's frame line.
+    /// The orb widens the 28 pt dictation pill past its fixed frame (two 24 pt buttons leave 44 pt for it);
+    /// this padding grows the capsule glass around it without touching upstream's frame line.
     static func pillPadding(animated: Bool) -> EdgeInsets {
         guard isShown(animated: animated) else { return EdgeInsets() }
         let vertical = (pillHeight(animated: animated) - 28) / 2
-        return EdgeInsets(top: vertical, leading: 18, bottom: vertical, trailing: 18)
+        let horizontal = max(4, (CGFloat(OrbAppearance.current.size) - 44) / 2 + 4)
+        return EdgeInsets(top: vertical, leading: horizontal, bottom: vertical, trailing: horizontal)
     }
-    static func pillHeight(animated: Bool) -> CGFloat { isShown(animated: animated) ? diameter + 8 : 28 }
+    static func pillHeight(animated: Bool) -> CGFloat {
+        isShown(animated: animated) ? max(28, CGFloat(OrbAppearance.current.size) + 8) : 28
+    }
 
     var body: some View {
         if Self.isShown(animated: animated) {
-            let size = compact ? Self.compactDiameter : Self.diameter
+            let appearance = OrbAppearance.current
+            let size = compact ? Self.compactDiameter : CGFloat(appearance.size)
+            let _ = appearance.install()
             TimelineView(.animation) { context in
-                LiquidOrbView(state: state, audio: audio(at: context.date))
+                LiquidOrbView(state: state, audio: audio(at: context.date, sensitivity: Float(appearance.sensitivity)))
             }
             .frame(width: size, height: size)
             .frame(width: compact ? 28 : size, height: compact ? 14 : size)
@@ -45,15 +49,15 @@ struct OrbWaveform: View {
     }
 
     /// VoiceLevels carries one broadband level, so every orb band follows it.
-    private func audio(at date: Date) -> LiquidOrbAudio {
+    private func audio(at date: Date, sensitivity: Float) -> LiquidOrbAudio {
         guard case .listening(let levels) = mode else { return LiquidOrbAudio() }
-        let level = smoothing.next(levels.value(at: date))
+        let level = min(1, smoothing.next(levels.value(at: date)) * sensitivity)
         return LiquidOrbAudio(low: level, mid: level, high: level, all: level)
     }
 }
 
 /// Eases the level so the waves open and close smoothly with speech instead of twitching per syllable.
-private final class LevelSmoothing {
+final class LevelSmoothing {
     private var value: Float = 0
 
     func next(_ target: Float) -> Float {

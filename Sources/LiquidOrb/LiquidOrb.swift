@@ -506,7 +506,7 @@ metal::float3 glsSiriFluid(
     float high = 0.5 + (0.5 * metal::cos((t_2 * 0.73) + 2.1));
     float drift_1 = t_2 * 2.4;
     float _e50 = u.ridgeAmt;
-    float mainAmplitude = (0.25 + (_e50 * 0.075)) + (low * 0.018);
+    float mainAmplitude = ((0.25 + (_e50 * 0.075)) + (low * 0.018)) * (0.3 + 1.2 * u.particleDensity);
     float bandAmplitude = (mainAmplitude + (mid * 0.025)) + (high * 0.018);
     float mainY_1 = (mainAmplitude * envelope_1) * metal::sin((q_5.x * 1.1) + drift_1);
     float _e73 = u.warp;
@@ -1076,7 +1076,7 @@ metal::float3 glsVoiceWaveFluid(
     float rimEnvelope = metal::pow(metal::max(1.0 - (q_9.x * q_9.x), 0.0), 0.72);
     float drift_3 = t_12 * 0.82;
     float _e24 = u.warp;
-    float amplitude_4 = 0.2 + (_e24 * 0.018);
+    float amplitude_4 = (0.2 + (_e24 * 0.018)) * (0.3 + 1.2 * u.particleDensity);
     float mainY_2 = rimEnvelope * ((amplitude_4 * metal::sin((q_9.x * 1.48) + drift_3)) + (0.055 * metal::sin(((q_9.x * 3.2) - (drift_3 * 0.43)) + 1.1)));
     float distance = q_9.y - mainY_2;
     float _e52 = u.ridgeAmt;
@@ -2028,7 +2028,8 @@ public enum LiquidOrbState: Sendable {
 }
 
 private func orbUniformSeed(for state: LiquidOrbState) -> [Float] {
-    switch state {
+    if let seeds = LiquidOrbSeeds.current { return state == .idle ? seeds.idle : seeds.thinking }
+    return switch state {
     case .idle: orbIdleUniformSeed
     case .thinking: orbThinkingUniformSeed
     }

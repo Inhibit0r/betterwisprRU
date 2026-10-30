@@ -11,19 +11,25 @@
 
 | Файл | Что делает |
 |------|------------|
-| `Sources/LiquidOrb/LiquidOrb.swift` | Экспорт орба «как есть» (SwiftUI + Metal-шейдер строкой). Не редактировать руками — менять через импорт. |
+| `Sources/LiquidOrb/LiquidOrb.swift` | Экспорт орба (SwiftUI + Metal-шейдер строкой) с правками импорта. Не редактировать руками — менять через импорт. |
+| `Sources/LiquidOrb/LiquidOrbSeeds.swift` | Точка подмены параметров экспорта: стиль и цвета из настроек без нового экспорта. |
+| `Sources/BetterWispr/Features/Recording/OrbStyleSeeds.swift` | Параметры стилей из выгрузок редактора (генерирует `scripts/orb-seeds.sh`). |
+| `Sources/BetterWispr/Features/Recording/OrbAppearance.swift` | Стили и кастомизация орба: размер, чувствительность, скорость, стекло, цвета волн; UserDefaults `fork.orb.*`. |
+| `Sources/BetterWispr/Features/Settings/OrbSettingsSection.swift` | Раздел настроек «Orb» с живым превью. |
 | `Sources/BetterWispr/Features/Recording/OrbWaveform.swift` | Переходник: уровень голоса → орб, размер, сглаживание, состояния. Сюда — все свои доработки анимации. |
 | `Sources/BetterWispr/Features/Recording/CapsuleView.swift` | `OrbWaveform(...)` вместо `Waveform(...)` в `CapsuleWaveform`; отступы вокруг `dictationPill` в `surface` и скругление из `OrbWaveform` (строку `.frame` пилюли не трогаем — её меняет upstream); орб вместо спиннера при распознавании; подпись VoiceOver «Transcribing». |
 | `Sources/BetterWispr/App/CapsulePlacement.swift` | Место появления капсулы и строка «Capsule position» в настройках; значение в UserDefaults (`fork.capsulePlacement`), схема AppSettings не меняется. |
 | `Sources/BetterWispr/App/CapsuleController.swift` | Одна строка: позиция панели из `CapsulePlacement`. |
-| `Sources/BetterWispr/Features/Settings/SettingsView.swift` | Раздел «Capsule» с `CapsulePlacementRow()` сразу после «Appearance» (рядом с тумблерами капсулы upstream вставляет свои). |
+| `Sources/BetterWispr/Features/Settings/SettingsView.swift` | Разделы «Capsule» (`CapsulePlacementRow()`) и «Orb» (`OrbSettingsSection()`) сразу после «Appearance» (рядом с тумблерами капсулы upstream вставляет свои). |
 | `Package.swift` | Модуль `LiquidOrb` (Swift 5, экспорт не рассчитан на строгую конкурентность) и зависимость от него. |
 | `Resources/Info.plist` | `SUFeedURL` указывает на релизы форка: иначе Sparkle заменит сборку с орбом на оригинал. |
+| `Tests/BetterWisprCoreTests/OrbAppearanceTests.swift` | Параметры каждого стиля полные и с верным номером стиля; скорость, стекло и цвета попадают в нужные ячейки. |
 | `Tests/BetterWisprCoreTests/CapsulePlacementTests.swift` | Позиции капсулы: штатная по центру, углы, «над курсором» не двигается, пока капсула видна. |
 | `Tests/BetterWisprCoreTests/LiquidOrbShaderTests.swift` | Компилирует шейдер орба: сломанный экспорт роняет приложение при первой диктовке, тест ловит это раньше. |
 | `.github/workflows/sync-upstream.yml` | Ежедневно вливает новый релиз upstream в ветку `orb`. |
 | `scripts/orb-update.sh` | Локально: показывает новое в форке, спрашивает, пересобирает и ставит в `/Applications`. |
 | `scripts/orb-import.sh` | Ставит новый экспорт орба из редактора. |
+| `scripts/orb-seeds.sh` | Печатает параметры стиля из выгрузки — для `OrbStyleSeeds.swift`. |
 
 Ветка `orb` — основная ветка форка. `main` форка не используется.
 
@@ -64,19 +70,34 @@ git push origin orb
 
 ### Голосовые волны
 
-Текущий стиль — Prismatic Field (`spectrum`): три симметричные волны вокруг светлой
-центральной линии. В экспорте редактора голос меняет только скорость и частоту волн,
-не их высоту. Импорт пишет громкость в `particleDensity` (uniform 32, его читают только
-Particle Ribbons), а в шейдере умножает высоту волн на `0.3 + 1.2 × громкость`: в тишине
-остаётся линия, при речи волны плавно расходятся от центра вверх и вниз. Коэффициенты —
-в `scripts/orb-import.sh`, после правки перезапустить импорт с файлом экспорта.
-Правка завязана на имя `amplitude_2` из сгенерированного Metal: если редактор его сменит,
-импорт остановится с сообщением, какой патч не лёг. Для других стилей голос идёт только
-штатным маппингом редактора.
+Стили в настройках — Prismatic Field, Siri Wave и Voice Membrane: у них есть центральная линия
+или волна. В экспорте редактора голос меняет у них только скорость и частоту, не высоту волн.
+Импорт пишет громкость в `particleDensity` (uniform 32, его читают только Particle Ribbons) и
+умножает высоту на `0.3 + 1.2 × громкость`: Prismatic Field — `amplitude_2`, Siri Wave —
+`mainAmplitude`, Voice Membrane — `amplitude_4`. В тишине остаётся линия, при речи волны
+плавно расходятся от центра. Aurora Veil, Neural Plasma и Violet Core линии не имеют — в выбор
+не включены. Правки завязаны на имена из сгенерированного Metal: если редактор их сменит,
+импорт остановится с сообщением, какой патч не лёг.
+
+### Настройки орба
+
+Settings → Orb: стиль, размер (48–112 pt), чувствительность к голосу и скорость (×0.5–×2),
+стеклянная оболочка, три цвета волн (Reset возвращает цвета стиля) и живое превью с
+образцом голоса. Цвета в покое приложение получает из выбранных: темнее и серее. Всё хранится
+в UserDefaults `fork.orb.*`, схема AppSettings upstream не меняется; применяется при следующем
+появлении капсулы. Шейдер у всех стилей один — стиль задают только параметры (136 чисел).
+
+### Как добавить стиль
+
+1. В редакторе выбрать стиль с центральной волной, настроить, Copy Code → SwiftUI, сохранить в файл.
+2. `scripts/orb-seeds.sh файл.swift` — вставить вывод новой константой в `OrbStyleSeeds.swift`,
+   добавить case в `OrbStyle` (название и `seeds`), номер стиля — в тест `OrbAppearanceTests`.
+3. Если у стиля своя функция в шейдере без правки голоса — добавить патч в `scripts/orb-import.sh`
+   и перезапустить импорт.
 
 ### Размер и поведение
 
-`OrbWaveform.swift`: `diameter` (72 pt; орб раздвигает кнопки пилюли, а `pillPadding` растит стекло капсулы), скорость сглаживания `LevelSmoothing` (подъём 0.3, спад 0.1 за кадр),
+`OrbWaveform.swift`: размер из настроек (орб раздвигает кнопки пилюли, а `pillPadding` растит стекло капсулы), скорость сглаживания `LevelSmoothing` (подъём 0.3, спад 0.1 за кадр),
 состояния (запись — `thinking` с громкостью, ожидание микрофона и распознавание — `idle`).
 У notetaker орб компактный (40 pt), его пилюля не меняется. С Reduce Motion или без Metal —
 штатные полоски и размеры.
