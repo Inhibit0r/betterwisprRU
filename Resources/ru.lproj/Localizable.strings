@@ -477,7 +477,7 @@
 "Press and release ⌃, ⌥, ⇧ or ⌘ alone, use a key combination, or press an F-key. Esc cancels." = "Нажмите и отпустите ⌃, ⌥, ⇧ или ⌘ отдельно, используйте комбинацию клавиш или нажмите F-клавишу. Esc отменяет.";
 "Needs Accessibility. Uses the left or right key you recorded." = "Нужен универсальный доступ. Используется левая или правая клавиша, которую вы записали.";
 "Starts dictation from any app." = "Запускает диктовку из любого приложения.";
-"Type shortcut…" = "Ввести сочетание…";
+"Type shortcut…" = "Нажмите сочетание…";
 "That key can’t be a shortcut. Try another." = "Эта клавиша не может быть сочетанием. Попробуйте другую.";
 "Fn can’t be a shortcut. Try ⌥ alone or an F-key such as F5." = "Fn не может быть сочетанием. Попробуйте ⌥ отдельно или F-клавишу, например F5.";
 "Press and release one modifier alone, or hold the modifiers and press another key." = "Нажмите и отпустите одну клавишу-модификатор или удерживайте модификаторы и нажмите другую клавишу.";
@@ -1018,3 +1018,7 @@
 "sound.finished" = "конец записи";
 "sound.cancelled" = "отмена";
 "sound.attention" = "требует внимания";
+"MP3, M4A, AAC, WAV, AIFF, CAF, FLAC, MP4, MOV or M4V" = "MP3, M4A, AAC, WAV, AIFF, CAF, FLAC, MP4, MOV или M4V";
+"BetterWispr can’t read the audio in “%@”. Choose an %@ file." = "BetterWispr не может прочитать звук в «%1$@». Выберите файл %2$@.";
+"“%@” has no audio track. Choose an %@ file." = "В «%1$@» нет звуковой дорожки. Выберите файл %2$@.";
+"transcribe.button" = "Расшифровать";

@@ -114,7 +114,7 @@ private struct TranscribeHome: View {
             Text("Drop an audio or video file").font(.system(size: 15, weight: .medium))
             Button("Choose File…") { importing = true }
                 .disabled(busy)
-            Text(MediaAudioError.formats)
+            Text(MediaAudioError.formats.localized)
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
@@ -145,7 +145,7 @@ private struct TranscribeHome: View {
                 .textFieldStyle(.roundedBorder)
                 .onSubmit(transcribeLink)
                 .accessibilityLabel("Video link")
-            Button("Transcribe", action: transcribeLink)
+            Button(Bundle.main.localizedString(forKey: "transcribe.button", value: "Transcribe", table: nil), action: transcribeLink) // Fork: verb, unlike the page title
                 .disabled(link.trimmingCharacters(in: .whitespaces).isEmpty || transcriptions.ytDLP == nil || busy)
         }
     }

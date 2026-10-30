@@ -9,8 +9,8 @@ public enum MediaAudioError: LocalizedError, Equatable {
 
     public var errorDescription: String? {
         switch self {
-        case .unreadable(let name): "BetterWispr can’t read the audio in “\(name)”. Choose an \(Self.formats) file."
-        case .noAudio(let name): "“\(name)” has no audio track. Choose an \(Self.formats) file."
+        case .unreadable(let name): String(localized: "BetterWispr can’t read the audio in “\(name)”. Choose an \(Bundle.main.localizedString(forKey: Self.formats, value: nil, table: nil)) file.")
+        case .noAudio(let name): String(localized: "“\(name)” has no audio track. Choose an \(Bundle.main.localizedString(forKey: Self.formats, value: nil, table: nil)) file.")
         }
     }
 }

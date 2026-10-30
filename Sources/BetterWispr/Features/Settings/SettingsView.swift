@@ -407,7 +407,7 @@ private struct ShortcutRecorder: View {
         case .selectedText: "Clean up selected text"
         }
     }
-    private var placeholder: String { kind == .dictation ? "" : "Set Shortcut…" }
+    private var placeholder: String { kind == .dictation ? "" : "Set Shortcut…".localized }
 
     var body: some View {
         SettingRow(title, caption: caption) {
@@ -461,7 +461,7 @@ private struct ShortcutRecorder: View {
         let button = Button {
             if isCapturing { stop() } else { start() }
         } label: {
-            Text(isCapturing ? (held.isEmpty ? "Type shortcut…" : held.symbols + " …") : (shortcut?.displayName ?? placeholder))
+            Text(isCapturing ? (held.isEmpty ? "Type shortcut…".localized : held.symbols + " …") : (shortcut?.displayName ?? placeholder))
                 .frame(minWidth: 96)
                 .contentTransition(.opacity)
         }
