@@ -100,7 +100,7 @@ struct VocabularyView: View {
                 }
                 if let installation {
                     if installing { ProgressView(value: installation.progress) }
-                    Text(installation.failure.map { "Download stopped: \($0)" } ?? installation.progressLabel)
+                    Text(installation.failure.map { String(localized: "Download stopped: \($0)") } ?? installation.progressLabel)
                         .font(.caption)
                         .foregroundStyle(installing ? AnyShapeStyle(.secondary) : AnyShapeStyle(.red))
                 }

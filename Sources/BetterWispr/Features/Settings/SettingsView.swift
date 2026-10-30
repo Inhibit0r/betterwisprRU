@@ -49,8 +49,8 @@ struct SettingsView: View {
                 }
 
                 SettingsSection("Microphone and language") {
-                    SettingRow("Microphone", caption: (model.settings.microphone == nil ? "Follows your Sound settings." : "Used whenever it’s connected.")
-                        + " Bluetooth headphones drop to call quality while recording.") {
+                    SettingRow("Microphone", caption: (model.settings.microphone == nil ? String(localized: "Follows your Sound settings.") : String(localized: "Used whenever it’s connected."))
+                        + String(localized: " Bluetooth headphones drop to call quality while recording.")) {
                         MicrophonePicker(model: model) { Text("Microphone") }
                             .labelsHidden()
                             .frame(maxWidth: 240)
@@ -118,7 +118,7 @@ struct SettingsView: View {
                     ForEach(Array(Self.voiceCommands.enumerated()), id: \.offset) { index, command in
                         if index > 0 { RowDivider() }
                         SettingRow(command.0) {
-                            Text(command.1)
+                            Text(command.1.localized)
                                 .font(.callout)
                                 .foregroundStyle(.secondary)
                                 .padding(.horizontal, 8)
@@ -156,7 +156,7 @@ struct SettingsView: View {
         let current = model.settings.language
         guard current != "auto", !choices.contains(where: { $0.code == current }) else { return choices }
         let name = Locale.current.localizedString(forLanguageCode: current) ?? current
-        return choices + [(code: current, name: "\(name) (not supported by \(selected.name))")]
+        return choices + [(code: current, name: String(localized: "\(name) (not supported by \(selected.name))"))]
     }
 
     private var vocabularyCaption: String {
@@ -201,7 +201,7 @@ private struct ShortcutRecorder: View {
                     .transition(.opacity)
                 }
                 recordButton
-                    .accessibilityLabel(isCapturing ? "Keyboard shortcut, waiting for keys" : "Keyboard shortcut, \(shortcut.spokenName)")
+                    .accessibilityLabel(isCapturing ? String(localized: "Keyboard shortcut, waiting for keys") : String(localized: "Keyboard shortcut, \(shortcut.spokenName)"))
                     .accessibilityHint("Click, then press a shortcut, or press and release a modifier key such as Option.")
             }
             .disabled(model.isBusy)
@@ -256,8 +256,8 @@ private struct ShortcutRecorder: View {
         let key = Self.keyNames[Int(event.keyCode)] ?? event.characters(byApplyingModifiers: [])?.uppercased() ?? ""
         guard let shortcut = DictationShortcut(keyCode: UInt32(event.keyCode), modifiers: modifiers, key: key) else {
             let pressed = modifiers.isEmpty ? key : modifiers.symbols + " " + key
-            feedback = key.isEmpty ? "That key can’t be a shortcut. Try another."
-                                   : "\(pressed) is for typing, so it can’t start dictation. Hold ⌃, ⌥ or ⌘ with it."
+            feedback = key.isEmpty ? String(localized: "That key can’t be a shortcut. Try another.")
+                                   : String(localized: "\(pressed) is for typing, so it can’t start dictation. Hold ⌃, ⌥ or ⌘ with it.")
             return NSSound.beep()
         }
         model.changeShortcut(shortcut)
@@ -307,9 +307,9 @@ struct MicrophonePicker<Label: View>: View {
     var body: some View {
         Picker(selection: Binding(get: { model.settings.microphone?.id },
                                   set: { id in model.selectMicrophone(model.microphoneChoices.first { $0.id == id }) })) {
-            Text(model.automaticMicrophone.map { "Automatic (\($0.name))" } ?? "Automatic").tag(String?.none)
+            Text(model.automaticMicrophone.map { String(localized: "Automatic (\($0.name))") } ?? String(localized: "Automatic")).tag(String?.none)
             ForEach(model.microphoneChoices) { device in
-                Text(model.microphones.contains { $0.id == device.id } ? device.name : "\(device.name) (not connected)")
+                Text(model.microphones.contains { $0.id == device.id } ? device.name : String(localized: "\(device.name) (not connected)"))
                     .tag(Optional(device.id))
             }
         } label: {
@@ -364,9 +364,9 @@ struct SettingRow<Control: View>: View {
     var body: some View {
         HStack(spacing: 16) {
             VStack(alignment: .leading, spacing: 2) {
-                Text(title)
+                Text(title.localized)
                 if let caption {
-                    Text(caption)
+                    Text(caption.localized)
                         .font(.callout)
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
@@ -396,7 +396,7 @@ struct SettingToggle: View {
 
     var body: some View {
         SettingRow(title, caption: caption) {
-            Toggle(title, isOn: $isOn)
+            Toggle(title.localized, isOn: $isOn)
                 .labelsHidden()
                 .controlSize(.small)
         }

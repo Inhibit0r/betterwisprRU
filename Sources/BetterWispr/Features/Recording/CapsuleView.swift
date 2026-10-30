@@ -156,7 +156,7 @@ struct CapsuleView: View {
         case .meetingNotes: "Open meeting notes"
         case .dictation:
             switch model.phase {
-            case .recording: model.isHeldSession ? "Release \(model.settings.shortcut.displayName) to finish" : "Finish dictation"
+            case .recording: model.isHeldSession ? String(localized: "Release \(model.settings.shortcut.displayName) to finish") : String(localized: "Finish dictation")
             case .transcribing: "Transcribing…"
             default: "Starting microphone…"
             }
@@ -171,7 +171,7 @@ struct CapsuleView: View {
                     .font(.system(size: 17, weight: .medium))
                     .foregroundStyle(.yellow)
                     .accessibilityHidden(true)
-                Text(failure.title)
+                Text(failure.title.localized)
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(.white)
                     .fixedSize(horizontal: false, vertical: true)
@@ -189,7 +189,7 @@ struct CapsuleView: View {
                 .help("Dismiss error")
                 .accessibilityLabel("Dismiss error")
             }
-            Text(failure.message)
+            Text(failure.message.localized)
                 .font(.system(size: 13))
                 .foregroundStyle(.white.opacity(0.7))
                 .fixedSize(horizontal: false, vertical: true)
@@ -273,7 +273,7 @@ struct CapsuleView: View {
             Image(systemName: "checkmark.circle.fill")
                 .foregroundStyle(Color(red: 0.55, green: 0.9, blue: 0.7))
                 .accessibilityHidden(true)
-            Text(message)
+            Text(message.localized)
                 .font(.system(size: 14, weight: .medium))
                 .foregroundStyle(.white)
         }
@@ -430,7 +430,7 @@ struct CapsuleView: View {
             } else {
                 CapsuleWaveform(model: model, isNotetaking: isNotetaking, animated: !reduceMotion, count: model.isHeldSession ? 13 : 9)
                     .frame(maxWidth: .infinity)
-                    .accessibilityLabel(waveformLabel)
+                    .accessibilityLabel(waveformLabel.localized)
             }
             if !model.isHeldSession {
                 Button(action: model.toggleRecording) {
@@ -461,7 +461,7 @@ struct CapsuleView: View {
         HStack(spacing: 4) {
             CapsuleWaveform(model: model, isNotetaking: isNotetaking, animated: !reduceMotion, count: 13)
                 .frame(maxWidth: .infinity)
-                .accessibilityLabel(waveformLabel)
+                .accessibilityLabel(waveformLabel.localized)
             RoundedRectangle(cornerRadius: 2)
                 .fill(.white)
                 .frame(width: 7, height: 7)

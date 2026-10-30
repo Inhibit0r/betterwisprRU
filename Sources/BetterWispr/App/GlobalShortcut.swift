@@ -98,9 +98,9 @@ enum ShortcutError: LocalizedError {
     case monitorUnavailable
     var errorDescription: String? {
         switch self {
-        case .unavailable(let shortcut): "\(shortcut.displayName) is used by another app."
-        case .accessibilityRequired: "Allow Accessibility in Settings to use a modifier key by itself."
-        case .monitorUnavailable: "Couldn’t listen for the modifier key. Try choosing the shortcut again."
+        case .unavailable(let shortcut): String(localized: "\(shortcut.displayName) is used by another app.")
+        case .accessibilityRequired: String(localized: "Allow Accessibility in Settings to use a modifier key by itself.")
+        case .monitorUnavailable: String(localized: "Couldn’t listen for the modifier key. Try choosing the shortcut again.")
         }
     }
 }

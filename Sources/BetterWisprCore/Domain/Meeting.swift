@@ -270,8 +270,8 @@ public struct MeetingSection: Equatable, Sendable {
             let days = calendar.dateComponents([.day], from: calendar.startOfDay(for: meeting.createdAt), to: today).day ?? 0
             let day = calendar.isDate(meeting.createdAt, equalTo: now, toGranularity: .year) ? style : style.year()
             let title = switch days {
-            case ...0: "Today, \(meeting.createdAt.formatted(day))"
-            case 1: "Yesterday, \(meeting.createdAt.formatted(day))"
+            case ...0: String(localized: "Today, \(meeting.createdAt.formatted(day))")
+            case 1: String(localized: "Yesterday, \(meeting.createdAt.formatted(day))")
             default: meeting.createdAt.formatted(day.weekday(.abbreviated))
             }
             if sections.last?.title == title { sections[sections.count - 1].meetings.append(meeting) }

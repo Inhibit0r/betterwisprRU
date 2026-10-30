@@ -82,9 +82,9 @@ struct OnboardingView: View {
         VStack(spacing: 28) {
             hero.frame(height: 96)
             VStack(spacing: 10) {
-                Text(step.title)
+                Text(step.title.localized)
                     .font(.largeTitle.bold())
-                Text(step.subtitle)
+                Text(step.subtitle.localized)
                     .font(.title3)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
@@ -121,7 +121,7 @@ struct OnboardingView: View {
 
     private var welcome: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Label("\(model.settings.dictationMode == .hold ? "Hold" : "Press") \(shortcut) to start dictating", systemImage: "keyboard")
+            Label("\((model.settings.dictationMode == .hold ? "Hold" : "Press").localized) \(shortcut) to start dictating", systemImage: "keyboard")
             Label("Built-in models keep your audio on this Mac", systemImage: "lock.fill")
             Label("Add names and terms in Vocabulary", systemImage: "character.book.closed")
         }
@@ -164,7 +164,7 @@ struct OnboardingView: View {
                     Button("Use \(recommended.name)") { model.selectModel(recommended) }
                         .disabled(model.isBusy)
                 } else {
-                    Button(installation == nil ? "Download \(recommended.sizeLabel)" : "Retry") {
+                    Button(installation == nil ? String(localized: "Download \(recommended.sizeLabel)") : String(localized: "Retry")) {
                         model.installModel(recommended)
                     }
                     .disabled(model.isInstalling)
@@ -179,16 +179,16 @@ struct OnboardingView: View {
             }
         } label: {
             Text(recommended?.name ?? selected.name)
-            Text(modelDetail)
+            Text(modelDetail.localized)
         }
     }
 
     private var modelDetail: String {
         if let installation {
-            return installation.failure.map { "Download stopped: \($0)" } ?? installation.progressLabel
+            return installation.failure.map { String(localized: "Download stopped: \($0)") } ?? installation.progressLabel
         }
         if let recommended, model.selectedModel.id != recommended.id, model.isModelInstalled(model.selectedModel) {
-            return "You’re using \(model.selectedModel.name). \(recommended.name) is recommended."
+            return String(localized: "You’re using \(model.selectedModel.name). \(recommended.name) is recommended.")
         }
         return recommended?.detail ?? "Ready to use offline."
     }
@@ -221,8 +221,8 @@ struct OnboardingView: View {
     private var practiceText: String {
         if !model.partialTranscript.isEmpty { return model.partialTranscript }
         if model.isBusy { return model.statusMessage }
-        if model.settings.dictationMode == .hold { return "Hold \(shortcut), say something, then let go." }
-        return "Press \(shortcut), say something, then press it again."
+        if model.settings.dictationMode == .hold { return String(localized: "Hold \(shortcut), say something, then let go.") }
+        return String(localized: "Press \(shortcut), say something, then press it again.")
     }
 
     private var bottomBar: some View {

@@ -44,6 +44,8 @@ for resource in "$binary_dir"/*.bundle; do
     [[ "$(basename "$resource")" == FluidAudio_* ]] && continue
     cp -R "$resource" "$app/Contents/MacOS/"
 done
+# Fork: interface translations (Resources/<language>.lproj/Localizable.strings).
+for lproj in Resources/*.lproj; do ditto "$lproj" "$app/Contents/Resources/$(basename "$lproj")"; done
 identity="${CODESIGN_IDENTITY:-$(security find-identity -v -p codesigning 2>/dev/null | awk '/\)/ {print $2; exit}' || true)}"
 if [[ -z "$identity" ]]; then
     identity=-

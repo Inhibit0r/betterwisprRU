@@ -4,10 +4,10 @@ import SwiftUI
 private extension StyleContext {
     var title: String {
         switch self {
-        case .personal: "Personal messages"
-        case .work: "Work messages"
-        case .email: "Email"
-        case .other: "Other apps"
+        case .personal: "Personal messages".localized
+        case .work: "Work messages".localized
+        case .email: "Email".localized
+        case .other: "Other apps".localized
         }
     }
 
@@ -22,10 +22,10 @@ private extension StyleContext {
 
     var apps: String {
         switch self {
-        case .personal: "WhatsApp, Telegram, Discord, Messages, Signal and Messenger."
-        case .work: "Slack, Microsoft Teams, Zoom, Webex and Mattermost."
-        case .email: "Mail, Outlook, Superhuman, Spark, Mimestream, Airmail and Thunderbird."
-        case .other: "ChatGPT, Claude, Cursor, Notes, Notion, browsers and every other app. Browsers use this tone unless a mode below lists the website. Tones only change English dictation."
+        case .personal: "WhatsApp, Telegram, Discord, Messages, Signal and Messenger.".localized
+        case .work: "Slack, Microsoft Teams, Zoom, Webex and Mattermost.".localized
+        case .email: "Mail, Outlook, Superhuman, Spark, Mimestream, Airmail and Thunderbird.".localized
+        case .other: "ChatGPT, Claude, Cursor, Notes, Notion, browsers and every other app. Browsers use this tone unless a mode below lists the website. Tones only change English dictation.".localized
         }
     }
 
@@ -42,31 +42,32 @@ private extension StyleContext {
 extension StyleTone {
     var title: String {
         switch self {
-        case .formal: "Formal"
-        case .casual: "Casual"
-        case .veryCasual: "Very casual"
-        case .excited: "Excited"
+        case .formal: "Formal".localized
+        case .casual: "Casual".localized
+        case .veryCasual: "Very casual".localized
+        case .excited: "Excited".localized
         }
     }
 
     var detail: String {
         switch self {
-        case .formal: "Caps and punctuation, exactly as cleaned up."
-        case .casual: "Caps, fewer commas and no final period."
-        case .veryCasual: "No caps, fewer commas and no final period."
-        case .excited: "Ends on an exclamation mark."
+        case .formal: "Caps and punctuation, exactly as cleaned up.".localized
+        case .casual: "Caps, fewer commas and no final period.".localized
+        case .veryCasual: "No caps, fewer commas and no final period.".localized
+        case .excited: "Ends on an exclamation mark.".localized
         }
     }
 }
 
 extension CleanupLevel {
-    var title: String { rawValue.capitalized }
+    // Fork: own keys, since "Light" is also the theme name.
+    var title: String { Bundle.main.localizedString(forKey: "cleanup.\(rawValue)", value: rawValue.capitalized, table: nil) }
 
     var detail: String {
         switch self {
-        case .none: "Keeps exactly what you said, including filler words."
-        case .light: "Removes filler words like “um” and “you know”, stutters like “we we”, and corrections like “at 5, no, at 6”."
-        case .medium: "Also has your notes model fix self-corrections, numbers, punctuation and spoken lists in English dictation."
+        case .none: "Keeps exactly what you said, including filler words.".localized
+        case .light: "Removes filler words like “um” and “you know”, stutters like “we we”, and corrections like “at 5, no, at 6”.".localized
+        case .medium: "Also has your notes model fix self-corrections, numbers, punctuation and spoken lists in English dictation.".localized
         }
     }
 }
@@ -127,7 +128,7 @@ struct StyleView: View {
                         }
                     }
                 } footer: {
-                    Text(cleanupFooter)
+                    Text(cleanupFooter.localized)
                 }
 
                 VStack(alignment: .leading, spacing: 8) {
@@ -193,7 +194,7 @@ struct StyleView: View {
     private var recentAppsByContext: [StyleContext: String] {
         Dictionary(grouping: Set(model.history.compactMap(\.appBundleID)), by: { AppCategory(bundleID: $0).style }).compactMapValues { ids in
             let names = ids.compactMap { NSWorkspace.shared.urlForApplication(withBundleIdentifier: $0)?.deletingPathExtension().lastPathComponent }.sorted()
-            return names.isEmpty ? nil : "Your recent dictations here went to \(ListFormatter.localizedString(byJoining: names))."
+            return names.isEmpty ? nil : String(localized: "Your recent dictations here went to \(ListFormatter.localizedString(byJoining: names)).")
         }
     }
 
@@ -209,20 +210,20 @@ struct StyleView: View {
         let original = "Your original words are never lost. In History, open Original transcription and choose Use Original."
         guard model.settings.cleanup == .medium else { return original }
         let destination = switch model.settings.notesSelection {
-        case .apple: "Medium edits with Apple Intelligence on this Mac."
-        case .ollama: "Medium edits with Ollama on this Mac."
-        case .cli(let cli): "Medium sends English dictation to \(cli.name) through your subscription, which adds a few seconds."
-        case .connection: "Medium sends English dictation to \(model.settings.notesModelName) with your API key."
+        case .apple: "Medium edits with Apple Intelligence on this Mac.".localized
+        case .ollama: "Medium edits with Ollama on this Mac.".localized
+        case .cli(let cli): String(localized: "Medium sends English dictation to \(cli.name) through your subscription, which adds a few seconds.")
+        case .connection: String(localized: "Medium sends English dictation to \(model.settings.notesModelName) with your API key.")
         }
-        return "\(destination) It uses the same model as meeting notes, and results vary by model. Other languages, very short dictations and edits that fail, take too long or rewrite too much get Light cleanup. \(original)"
+        return String(localized: "\(destination) It uses the same model as meeting notes, and results vary by model. Other languages, very short dictations and edits that fail, take too long or rewrite too much get Light cleanup. \(original)")
     }
 
     private func example(_ title: String, _ text: String, emphasized: Bool) -> some View {
         VStack(alignment: .leading, spacing: 3) {
-            Text(title)
+            Text(title.localized)
                 .font(.callout)
                 .foregroundStyle(.secondary)
-            Text(text)
+            Text(text.localized)
                 .foregroundStyle(emphasized ? .primary : .secondary)
                 .fixedSize(horizontal: false, vertical: true)
         }
@@ -238,7 +239,7 @@ struct StyleView: View {
 
     private var screenTextCaption: String {
         let status = CGPreflightScreenCaptureAccess() ? "Screen Recording is allowed." : "Needs Screen Recording. Allow BetterWispr under Privacy & Security, Screen & System Audio Recording in System Settings, then reopen BetterWispr."
-        return "When an app shares too little text, reads its window from a screenshot on this Mac and sends that text to your notes model too, which may be a cloud service. \(status)"
+        return String(localized: "When an app shares too little text, reads its window from a screenshot on this Mac and sends that text to your notes model too, which may be a cloud service. \(status)")
     }
 
     private var recognizeScreenText: Binding<Bool> {

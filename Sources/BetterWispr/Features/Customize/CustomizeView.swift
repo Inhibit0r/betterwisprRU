@@ -15,6 +15,7 @@ struct CustomizeView: View {
     @AppStorage(OrbAppearance.Key.colors[1]) private var color2 = ""
     @AppStorage(OrbAppearance.Key.colors[2]) private var color3 = ""
     @State private var samplesVoice = true
+    @State private var language = AppLanguage.selected
 
     private var appearance: OrbAppearance {
         OrbAppearance(visualizer: visualizer, style: style, size: size, sensitivity: sensitivity, speed: speed,
@@ -73,6 +74,24 @@ struct CustomizeView: View {
                 }
                 .disabled(visualizer == .bars)
 
+                SettingsSection("Language") {
+                    SettingRow("Interface language", caption: language.needsRelaunch ? "Restart BetterWispr to switch." : nil) {
+                        HStack(spacing: 10) {
+                            if language.needsRelaunch {
+                                Button("Restart") { AppLanguage.relaunch() }
+                            }
+                            Picker("Interface language", selection: $language) {
+                                ForEach(AppLanguage.allCases) { option in
+                                    Text(verbatim: option == .system ? "Same as Mac".localized : option.nativeName).tag(option)
+                                }
+                            }
+                            .labelsHidden()
+                            .fixedSize()
+                        }
+                    }
+                }
+                .onChange(of: language) { language.select() }
+
                 SettingsSection("Position") {
                     CapsulePlacementRow()
                 } footer: {
@@ -91,7 +110,7 @@ struct CustomizeView: View {
         SettingRow(title, caption: caption) {
             Slider(value: value, in: range, step: step)
                 .frame(width: 180)
-                .accessibilityLabel(title)
+                .accessibilityLabel(title.localized)
         }
     }
 
@@ -122,8 +141,8 @@ private struct VisualizerCard<Thumbnail: View>: View {
                     .frame(maxWidth: .infinity)
                     .background(Color.black.opacity(0.85), in: .rect(cornerRadius: 8, style: .continuous))
                 VStack(spacing: 2) {
-                    Text(title).font(.callout.weight(.semibold))
-                    Text(subtitle).font(.caption).foregroundStyle(.secondary)
+                    Text(title.localized).font(.callout.weight(.semibold))
+                    Text(subtitle.localized).font(.caption).foregroundStyle(.secondary)
                 }
             }
             .padding(10)
@@ -136,7 +155,7 @@ private struct VisualizerCard<Thumbnail: View>: View {
         }
         .buttonStyle(.plain)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("\(title), \(subtitle)")
+        .accessibilityLabel("\(title.localized), \(subtitle.localized)")
         .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
     }
 }

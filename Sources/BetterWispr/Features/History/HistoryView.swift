@@ -81,7 +81,7 @@ struct TranscriptRow: View {
                     Text("·")
                     Text(transcript.modelName)
                     Text("·")
-                    Text(transcript.language == "auto" ? "Auto language" : transcript.language.uppercased())
+                    Text(transcript.language == "auto" ? "Auto language".localized : transcript.language.uppercased())
                 }
                 Spacer()
                 Button(action: onCopy) { Image(systemName: "doc.on.doc") }

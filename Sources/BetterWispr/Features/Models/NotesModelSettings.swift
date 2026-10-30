@@ -69,9 +69,9 @@ struct NotesModelSettings: View {
                 if model.loadingNotesCatalogs.contains(cli) { ProgressView().controlSize(.small) }
             }
             if let error = model.notesCatalogErrors[cli] {
-                Text(error).font(.caption).foregroundStyle(.secondary)
+                Text(error.localized).font(.caption).foregroundStyle(.secondary)
             } else if let item = model.notesCLICatalogs[cli]?.models.first(where: { $0.id == model.settings.cliModel(cli) }) {
-                Text(item.detail).font(.caption).foregroundStyle(.secondary)
+                Text(item.detail.localized).font(.caption).foregroundStyle(.secondary)
             }
             Text("Install the latest \(cli.name) CLI and run \(cli.loginCommand) in Terminal. BetterWispr uses that sign-in; subscription limits apply.")
                 .font(.caption).foregroundStyle(.secondary)
@@ -89,7 +89,7 @@ struct NotesModelSettings: View {
             .font(.caption).foregroundStyle(.secondary)
         if let result { Text(result).font(.callout).textSelection(.enabled) }
         if case .unavailable(let reason) = model.meetings.notesAvailability {
-            Text(reason).font(.callout).foregroundStyle(.secondary)
+            Text(reason.localized).font(.callout).foregroundStyle(.secondary)
         }
         // A view task cancels the request or CLI when this page is closed or Cancel is clicked.
         Color.clear.frame(height: 0)
@@ -102,7 +102,7 @@ struct NotesModelSettings: View {
                         userNotes: "Synthetic test meeting: We agreed to launch on Friday. Alex will send the checklist tomorrow.",
                         settings: settings) { _, _ in }
                     try Task.checkCancellation()
-                    result = "\(notes.summary.modelName ?? settings.notesModelName) is working. Sample summary: \(notes.summary.overview)"
+                    result = String(localized: "\(notes.summary.modelName ?? settings.notesModelName) is working. Sample summary: \(notes.summary.overview)")
                 } catch {
                     guard !Task.isCancelled else { return }
                     result = error.localizedDescription

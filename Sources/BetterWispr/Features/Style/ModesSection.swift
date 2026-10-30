@@ -34,11 +34,11 @@ struct ModesSection: View {
     private func summary(_ mode: WritingMode) -> String {
         let uses = mode.apps.map { AppChoice($0)?.name ?? $0 } + mode.websites + mode.triggerWords.map { "“\($0)”" }
         let changes = [
-            mode.cleanup.map { "\($0.title) cleanup" },
-            mode.tone.map { "\($0.title) tone" },
-            mode.useScreenContext.map { $0 ? "screen context on" : "screen context off" },
+            mode.cleanup.map { String(localized: "\($0.title) cleanup") },
+            mode.tone.map { String(localized: "\($0.title) tone") },
+            mode.useScreenContext.map { $0 ? String(localized: "screen context on") : String(localized: "screen context off") },
         ].compactMap { $0 }
-        let used = uses.isEmpty ? "Add an app, website or trigger word to use this mode." : "Used for \(ListFormatter.localizedString(byJoining: uses))."
+        let used = uses.isEmpty ? String(localized: "Add an app, website or trigger word to use this mode.") : String(localized: "Used for \(ListFormatter.localizedString(byJoining: uses)).")
         let changed = ListFormatter.localizedString(byJoining: changes)
         return "\(used) \(changed.isEmpty ? "Keeps your default settings." : changed.prefix(1).uppercased() + changed.dropFirst() + ".")"
     }
@@ -113,7 +113,7 @@ private struct WritingModeEditor: View {
                 Section {
                     Picker("Cleanup", selection: $mode.cleanup) {
                         Text("Same as default (\(model.settings.cleanup.title))").tag(CleanupLevel?.none)
-                        ForEach(CleanupLevel.allCases, id: \.self) { Text($0.title).tag(Optional($0)) }
+                        ForEach(CleanupLevel.allCases, id: \.self) { Text($0.title.localized).tag(Optional($0)) }
                     }
                     Picker("Tone", selection: $mode.tone) {
                         Text("Same as app").tag(StyleTone?.none)
@@ -122,7 +122,7 @@ private struct WritingModeEditor: View {
                     if (mode.cleanup ?? model.settings.cleanup) == .medium {
                         if !mode.apps.isEmpty || !mode.websites.isEmpty {
                             Picker("Screen context", selection: $mode.useScreenContext) {
-                                Text("Same as default (\(model.settings.useScreenContext ? "On" : "Off"))").tag(Bool?.none)
+                                Text("Same as default (\((model.settings.useScreenContext ? "On" : "Off").localized))").tag(Bool?.none)
                                 Text("On").tag(Optional(true))
                                 Text("Off").tag(Optional(false))
                             }
@@ -134,8 +134,8 @@ private struct WritingModeEditor: View {
                     Text("Writing")
                 } footer: {
                     Text((mode.cleanup ?? model.settings.cleanup) == .medium
-                         ? "Instructions go to your notes model with each Medium dictation in this mode. Screen context is read when you start dictating, so it follows this mode’s apps and websites, and a trigger word can turn it off but not on. It sends nearby text to your notes model, which may be a cloud service\(model.settings.recognizeScreenText ? ", and reads the window from a screenshot because Read window text from the screen is on" : "")."
-                         : "Choose Medium cleanup to add instructions for your notes model.")
+                         ? String(localized: "Instructions go to your notes model with each Medium dictation in this mode. Screen context is read when you start dictating, so it follows this mode’s apps and websites, and a trigger word can turn it off but not on. It sends nearby text to your notes model, which may be a cloud service\(model.settings.recognizeScreenText ? ", and reads the window from a screenshot because Read window text from the screen is on" : "").")
+                         : String(localized: "Choose Medium cleanup to add instructions for your notes model."))
                 }
 
                 if !isNew {

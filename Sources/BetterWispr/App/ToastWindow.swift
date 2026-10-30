@@ -20,7 +20,7 @@ extension Toast {
         switch result {
         case .copied: self.init(title: "Copied", message: "Ready to paste anywhere.", systemImage: "doc.on.doc")
         case .copiedForManualPaste: self.init(title: "Copied", message: "Paste into your app with ⌘V.", systemImage: "doc.on.clipboard")
-        case .pasted(let app): self.init(title: "Pasted", message: "Sent to \(app).", systemImage: "text.cursor")
+        case .pasted(let app): self.init(title: String(localized: "Pasted"), message: String(localized: "Sent to \(app)."), systemImage: "text.cursor")
         }
     }
 
@@ -117,9 +117,9 @@ private struct ToastView: View {
                 .foregroundStyle(toast.isError ? AnyShapeStyle(.red) : AnyShapeStyle(.secondary))
                 .frame(width: 32, height: 32)
             VStack(alignment: .leading, spacing: 2) {
-                Text(toast.title)
+                Text(toast.title.localized)
                     .font(.system(size: 13, weight: .semibold))
-                Text(toast.message)
+                Text(toast.message.localized)
                     .font(.system(size: 11))
                     .foregroundStyle(.secondary)
                     .lineLimit(2)
@@ -127,7 +127,7 @@ private struct ToastView: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
             if let action = toast.action {
-                Button(action.title) {
+                Button(action.title.localized) {
                     dismiss()
                     action.perform()
                 }

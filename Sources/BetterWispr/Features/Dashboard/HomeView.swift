@@ -29,7 +29,7 @@ struct HomeView: View {
 
                 VStack(alignment: .leading, spacing: 8) {
                     SectionHeader(title: "Recent") {
-                        if !model.history.isEmpty { PageLink(title: "View all \(model.history.count.formatted())") { model.selectedPage = .history } }
+                        if !model.history.isEmpty { PageLink(title: String(localized: "View all \(model.history.count.formatted())")) { model.selectedPage = .history } }
                     }
                     recent
                 }
@@ -118,7 +118,7 @@ private struct DictationPanel: View {
     var body: some View {
         HStack(alignment: .center, spacing: 20) {
             VStack(alignment: .leading, spacing: 10) {
-                Text(headline)
+                Text(headline.localized)
                     .font(.system(size: 24, weight: .semibold))
                     .tracking(-0.4)
                     .contentTransition(.opacity)
@@ -237,7 +237,7 @@ private struct ProminentButton: View {
 
     var body: some View {
         Button(action: action) {
-            Label(title, systemImage: symbol)
+            Label(title.localized, systemImage: symbol)
                 .font(.body.weight(.semibold))
                 .foregroundStyle(.white)
                 .padding(.horizontal, 16)
@@ -287,7 +287,7 @@ private struct StatTile: View {
     var body: some View {
         Card {
             VStack(alignment: .leading, spacing: 6) {
-                Text(label)
+                Text(label.localized)
                     .font(.callout)
                     .foregroundStyle(.secondary)
                 HStack(alignment: .firstTextBaseline, spacing: 4) {
@@ -297,7 +297,7 @@ private struct StatTile: View {
                         .monospacedDigit()
                         .contentTransition(.numericText())
                     if let unit {
-                        Text(unit).foregroundStyle(.secondary)
+                        Text(unit.localized).foregroundStyle(.secondary)
                     }
                 }
                 .lineLimit(1)
@@ -397,7 +397,7 @@ private struct SetupTiles: View {
         let tiles = [
             SetupTile(
                 symbol: "cpu", title: "Speech model", value: speech.name,
-                detail: speech.connection.map { "Sends audio to \($0.endpoint)" } ?? (installed ? (onOlderParakeet ? "Try Parakeet Ultra" : "Runs on this Mac") : "Not downloaded yet"),
+                detail: speech.connection.map { String(localized: "Sends audio to \($0.endpoint)") } ?? (installed ? (onOlderParakeet ? String(localized: "Try Parakeet Ultra") : String(localized: "Runs on this Mac")) : String(localized: "Not downloaded yet")),
                 ready: installed
             ) { model.selectedPage = .models },
             SetupTile(
@@ -438,7 +438,7 @@ private struct SetupTile: View {
             VStack(alignment: .leading, spacing: 6) {
                 HStack(spacing: 6) {
                     Image(systemName: symbol).frame(width: 16, height: 16)
-                    Text(title)
+                    Text(title.localized)
                     Spacer(minLength: 4)
                     Image(systemName: "chevron.right")
                         .font(.caption.weight(.semibold))
@@ -454,7 +454,7 @@ private struct SetupTile: View {
                     Circle()
                         .fill(ready ? Color.green : .orange)
                         .frame(width: 6, height: 6)
-                    Text(detail)
+                    Text(detail.localized)
                         .foregroundStyle(ready ? AnyShapeStyle(.secondary) : AnyShapeStyle(Color.orange))
                         .lineLimit(1)
                         .truncationMode(.middle)

@@ -6,16 +6,16 @@ import SwiftUI
 private extension InsightsPeriod {
     var title: String {
         switch self {
-        case .week: "7 days"
-        case .month: "30 days"
-        case .allTime: "All time"
+        case .week: "7 days".localized
+        case .month: "30 days".localized
+        case .allTime: "All time".localized
         }
     }
 
     var comparison: String {
         switch self {
-        case .week: "prior 7 days"
-        case .month: "prior 30 days"
+        case .week: "prior 7 days".localized
+        case .month: "prior 30 days".localized
         case .allTime: ""
         }
     }
@@ -90,7 +90,7 @@ struct InsightsView: View {
                 .contentTransition(.opacity)
             Spacer(minLength: 12)
             Picker("Period", selection: $period) {
-                ForEach(InsightsPeriod.allCases) { Text($0.title).tag($0) }
+                ForEach(InsightsPeriod.allCases) { Text($0.title.localized).tag($0) }
             }
             .pickerStyle(.segmented)
             .labelsHidden()
@@ -119,7 +119,7 @@ private struct CardTitle<Accessory: View>: View {
 
     var body: some View {
         HStack(alignment: .firstTextBaseline) {
-            Text(title)
+            Text(title.localized)
                 .font(.headline)
                 .accessibilityAddTraits(.isHeader)
             Spacer(minLength: 8)
@@ -141,7 +141,7 @@ private struct BigFigure: View {
                 .font(.system(size: 26, weight: .semibold))
                 .tracking(-0.4)
                 .contentTransition(.numericText())
-            Text(caption).foregroundStyle(.secondary)
+            Text(caption.localized).foregroundStyle(.secondary)
         }
         .lineLimit(1)
         .accessibilityElement(children: .combine)
@@ -167,7 +167,7 @@ private struct MetricTiles: View {
                 label: "Time saved", value: formattedTime(now.timeSaved),
                 current: now.timeSaved, previous: before?.timeSaved, comparison: comparison,
                 note: Text("vs typing at \(typing) wpm"),
-                help: "Estimate: the time these words take to type at \(typing) wpm, the mean of 168,000 typists in Dhakal et al., CHI 2018, minus the time you spent speaking."
+                help: String(localized: "Estimate: the time these words take to type at \(typing) wpm, the mean of 168,000 typists in Dhakal et al., CHI 2018, minus the time you spent speaking.")
             ),
             MetricTile(
                 label: "Speaking pace", value: now.wordsPerMinute.formatted(), unit: "wpm",
@@ -206,7 +206,7 @@ private struct MetricTile: View {
     var body: some View {
         Card {
             VStack(alignment: .leading, spacing: 6) {
-                Text(label)
+                Text(label.localized)
                     .font(.callout)
                     .foregroundStyle(.secondary)
                 HStack(alignment: .firstTextBaseline, spacing: 4) {
@@ -214,7 +214,7 @@ private struct MetricTile: View {
                         .font(.system(size: 26, weight: .semibold))
                         .tracking(-0.4)
                         .contentTransition(.numericText())
-                    if let unit { Text(unit).foregroundStyle(.secondary) }
+                    if let unit { Text(unit.localized).foregroundStyle(.secondary) }
                 }
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
@@ -260,7 +260,7 @@ private struct ActivityCard: View {
         let step = buckets.count <= 12 ? 1 : Int((Double(buckets.count) / 6).rounded(.up))
         Card(padding: 18) {
             VStack(alignment: .leading, spacing: 14) {
-                CardTitle(title: "Words per \(unitName)") {
+                CardTitle(title: String(localized: "Words per \(unitName)")) {
                     if let selected {
                         Text("\(label(selected.start)): \(selected.words.formatted()) words").foregroundStyle(.primary)
                     } else if let busiest, busiest.words > 0 {
@@ -313,9 +313,9 @@ private struct ActivityCard: View {
 
     private var unitName: String {
         switch insights.granularity {
-        case .weekOfYear: "week"
-        case .month: "month"
-        default: "day"
+        case .weekOfYear: "week".localized
+        case .month: "month".localized
+        default: "day".localized
         }
     }
 
@@ -329,7 +329,7 @@ private struct ActivityCard: View {
 
     private func label(_ date: Date) -> String {
         switch insights.granularity {
-        case .weekOfYear: "Week of \(date.formatted(.dateTime.month(.abbreviated).day()))"
+        case .weekOfYear: String(localized: "Week of \(date.formatted(.dateTime.month(.abbreviated).day()))")
         case .month: date.formatted(.dateTime.month(.wide).year())
         default: date.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day())
         }
@@ -359,7 +359,7 @@ private struct TopAppsCard: View {
                 }
                 if !others.isEmpty {
                     AppRow(bundleID: nil, words: otherWords, share: Double(otherWords) / total,
-                           fallbackName: others.count == 1 ? "1 other app" : "\(others.count) other apps")
+                           fallbackName: others.count == 1 ? String(localized: "1 other app") : String(localized: "\(others.count) other apps"))
                 }
                 if insights.dictationsWithoutApp > 0, !insights.apps.isEmpty {
                     Text("Not counted: ^[\(insights.dictationsWithoutApp) dictation](inflect: true) with no app recorded.")
@@ -466,7 +466,7 @@ private struct TimeOfDayCard: View {
                 }
                 if total > 0 {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(part.headline).font(.title3.weight(.semibold))
+                        Text(part.headline.localized).font(.title3.weight(.semibold))
                         Text("\((Double(part.words(hours)) / Double(total)).formatted(.percent.precision(.fractionLength(0)))) of your words")
                             .foregroundStyle(.secondary)
                     }
@@ -508,7 +508,7 @@ private struct CleanupCard: View {
             VStack(alignment: .leading, spacing: 12) {
                 CardTitle(title: "Cleanup") { EmptyView() }
                 VStack(alignment: .leading, spacing: 2) {
-                    BigFigure(value: insights.wordsCleaned.formatted(), caption: insights.wordsCleaned == 1 ? "word removed" : "words removed")
+                    BigFigure(value: insights.wordsCleaned.formatted(), caption: insights.wordsCleaned == 1 ? String(localized: "word removed") : String(localized: "words removed"))
                     Text(insights.wordsCleaned == 0
                         ? "Nothing needed cleaning in this period."
                         : "\(share.formatted(.percent.precision(.fractionLength(0)))) of the \(insights.spokenWords.formatted()) words you said")
@@ -570,7 +570,7 @@ private struct StreakCard: View {
                     Text("Longest: ^[\(insights.longestStreak) day](inflect: true)")
                 }
                 VStack(alignment: .leading, spacing: 2) {
-                    BigFigure(value: streak.formatted(), caption: streak == 1 ? "day in a row" : "days in a row")
+                    BigFigure(value: streak.formatted(), caption: streak == 1 ? String(localized: "day in a row") : String(localized: "days in a row"))
                     if !insights.activeDates.contains(today) {
                         Text(streak > 0 ? "Dictate today to keep it going." : "Dictate today to start a streak.")
                             .foregroundStyle(.secondary)
@@ -602,7 +602,7 @@ private struct StreakCard: View {
                         .accessibilityLabel("\(day.formatted(.dateTime.weekday(.wide))), \(active ? "dictated" : "no dictation")")
                     }
                 }
-                Text(activeNote)
+                Text(activeNote.localized)
                     .font(.callout)
                     .foregroundStyle(.secondary)
             }
@@ -611,7 +611,7 @@ private struct StreakCard: View {
 
     private var activeNote: String {
         let days = insights.activeDays == 1 ? "1 day" : "\(insights.activeDays) days"
-        if let length = insights.period.days { return "Active on \(insights.activeDays) of the last \(length) days" }
-        return "Active on \(days) since \(insights.start.formatted(.dateTime.month(.abbreviated).day()))"
+        if let length = insights.period.days { return String(localized: "Active on \(insights.activeDays) of the last \(length) days") }
+        return String(localized: "Active on \(days) since \(insights.start.formatted(.dateTime.month(.abbreviated).day()))")
     }
 }

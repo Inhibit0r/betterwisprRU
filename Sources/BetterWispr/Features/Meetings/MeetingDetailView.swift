@@ -81,7 +81,7 @@ struct MeetingDetailView: View {
         HStack(spacing: 24) {
             ForEach(Tab.allCases, id: \.self) { item in
                 Button { tab = item } label: {
-                    Text(item.rawValue)
+                    Text(item.rawValue.localized)
                         .font(.system(size: 14, weight: .medium))
                         .foregroundStyle(tab == item ? .primary : .secondary)
                         .padding(.vertical, 10)
@@ -105,7 +105,7 @@ struct MeetingDetailView: View {
             if isActive, let issue = meetings.systemAudioIssue ?? (meetings.showsCallAudioHint ? Self.callAudioHint : nil) {
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
                     Image(systemName: "speaker.slash")
-                    Text(issue).fixedSize(horizontal: false, vertical: true)
+                    Text(issue.localized).fixedSize(horizontal: false, vertical: true)
                     Spacer(minLength: 0)
                     Button("Open Settings") { NSWorkspace.shared.open(Self.audioSettings) }
                 }
@@ -116,7 +116,7 @@ struct MeetingDetailView: View {
             switch meetings.activity {
             case .starting(let active) where active == id:
                 controlBar {
-                    progress("Preparing \(meeting.modelName)…")
+                    progress(String(localized: "Preparing \(meeting.modelName)…"))
                     Spacer(minLength: 8)
                     Button("Cancel", action: meetings.stop)
                 }
@@ -148,9 +148,9 @@ struct MeetingDetailView: View {
             case .generating(let active) where active == id:
                 controlBar {
                     if let (step, total) = meetings.generationStep, total > 1 {
-                        progress("Writing summary… part \(step) of \(total)")
+                        progress(String(localized: "Writing summary… part \(step) of \(total)"))
                     } else {
-                        progress("Writing summary with \(meetings.notesSettings.notesModelName)…")
+                        progress(String(localized: "Writing summary with \(meetings.notesSettings.notesModelName)…"))
                     }
                     Spacer(minLength: 8)
                     Button("Cancel", action: meetings.cancelNotes)
@@ -211,7 +211,7 @@ struct MeetingDetailView: View {
         }
         .menuStyle(.borderlessButton)
         .fixedSize()
-        .help(meetings.microphone.map { "Microphone: \($0.name)" } ?? "Choose the microphone for this meeting")
+        .help(meetings.microphone.map { String(localized: "Microphone: \($0.name)") } ?? String(localized: "Choose the microphone for this meeting"))
         .accessibilityLabel("Microphone")
         .accessibilityValue(meetings.microphone?.name ?? "None")
     }
@@ -219,7 +219,7 @@ struct MeetingDetailView: View {
     private func progress(_ title: String) -> some View {
         HStack(spacing: 8) {
             ProgressView().controlSize(.small)
-            Text(title).foregroundStyle(.secondary)
+            Text(title.localized).foregroundStyle(.secondary)
         }
     }
 
@@ -280,7 +280,7 @@ struct MeetingDetailView: View {
                         ForEach(summary.actionItems) { item in actionItem(item) }
                     }
                 }
-                Text(summary.modelName.map { "Generated with \($0)" } ?? "Generated summary")
+                Text(summary.modelName.map { String(localized: "Generated with \($0)") } ?? String(localized: "Generated summary"))
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -290,7 +290,7 @@ struct MeetingDetailView: View {
                 Text("Finish recording to turn your transcript and thoughts into key points, decisions, and action items.")
                     .foregroundStyle(.secondary)
                 if case .unavailable(let reason) = meetings.notesAvailability {
-                    Text(reason).font(.callout).foregroundStyle(.secondary)
+                    Text(reason.localized).font(.callout).foregroundStyle(.secondary)
                 }
             }
         } else {
@@ -300,7 +300,7 @@ struct MeetingDetailView: View {
 
     private func section(_ title: String, @ViewBuilder content: () -> some View) -> some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text(title).font(.headline)
+            Text(title.localized).font(.headline)
             content()
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -347,7 +347,7 @@ struct MeetingDetailView: View {
             }
             .buttonStyle(.borderedProminent)
             .disabled(unavailable != nil || meetings.activity != .idle)
-            if let unavailable { Text(unavailable).font(.callout).foregroundStyle(.secondary) }
+            if let unavailable { Text(unavailable.localized).font(.callout).foregroundStyle(.secondary) }
         }
         .padding(20)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -483,7 +483,7 @@ private struct LevelMeter: View {
     var body: some View {
         let level = min(1, max(0, speaker == .me ? meetings.levels.me : meetings.levels.them))
         HStack(spacing: 6) {
-            Text(speaker.label)
+            Text(speaker.label.localized)
                 .font(.caption2.weight(.medium))
                 .foregroundStyle(.secondary)
                 .frame(width: 30, alignment: .leading)
@@ -530,7 +530,7 @@ private struct SegmentRow: View {
             HStack(spacing: 6) {
                 Circle().fill(segment.speaker == .me ? Color.green : voiceColor(segment.participant)).frame(width: 6, height: 6)
                     .accessibilityHidden(true)
-                Text(label).fontWeight(.semibold)
+                Text(label.localized).fontWeight(.semibold)
                 Text(segment.timestamp).foregroundStyle(.secondary).monospacedDigit()
             }
             .font(.caption)

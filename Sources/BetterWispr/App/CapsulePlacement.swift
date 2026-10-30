@@ -49,7 +49,7 @@ struct CapsulePlacementRow: View {
     var body: some View {
         SettingRow("Capsule position", caption: "Where the capsule appears while you dictate. Above the pointer is set when dictation starts and stays put; at rest the capsule sits at the bottom center.") {
             Picker("Capsule position", selection: $placement) {
-                ForEach(CapsulePlacement.allCases, id: \.self) { Text($0.title).tag($0) }
+                ForEach(CapsulePlacement.allCases, id: \.self) { Text($0.title.localized).tag($0) }
             }
             .labelsHidden()
             .fixedSize()

@@ -50,10 +50,10 @@ struct DashboardView: View {
                 ForEach(AppPage.sections, id: \.pages) { section in
                     Section {
                         ForEach(section.pages) { page in
-                            Label(page.title, systemImage: page.symbol).tag(page)
+                            Label(page.title.localized, systemImage: page.symbol).tag(page)
                         }
                     } header: {
-                        if let title = section.title { Text(title) }
+                        if let title = section.title { Text(title.localized) }
                     }
                 }
             }
@@ -69,7 +69,7 @@ struct DashboardView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .animation(.ui, value: model.selectedPage)
-            .navigationTitle(model.selectedPage.title)
+            .navigationTitle(model.selectedPage.title.localized)
             .safeAreaInset(edge: .bottom, spacing: 0) {
                 if !model.statusMessage.isEmpty { statusBar }
             }
@@ -106,7 +106,7 @@ struct DashboardView: View {
         HStack(alignment: .firstTextBaseline, spacing: 6) {
             Image(systemName: model.failure != nil ? "exclamationmark.triangle.fill" : "info.circle")
                 .foregroundStyle(model.failure != nil ? Color.red : Color.secondary)
-            Text(model.statusMessage)
+            Text(model.statusMessage.localized)
                 .textSelection(.enabled)
             Spacer(minLength: 0)
         }

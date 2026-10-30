@@ -47,7 +47,7 @@ struct SectionHeader<Accessory: View>: View {
 
     var body: some View {
         HStack(alignment: .firstTextBaseline) {
-            Text(title)
+            Text(title.localized)
                 .font(.callout.weight(.semibold))
                 .foregroundStyle(.secondary)
                 .accessibilityAddTraits(.isHeader)
@@ -73,7 +73,7 @@ struct PageLink: View {
     var body: some View {
         Button(action: action) {
             HStack(spacing: 3) {
-                Text(title)
+                Text(title.localized)
                 Image(systemName: "chevron.right").font(.caption2.weight(.semibold))
             }
             .font(.callout)
@@ -131,8 +131,8 @@ struct PermissionRow: View {
                 Button("Allow…", action: action)
             }
         } label: {
-            Text(title)
-            Text(detail)
+            Text(title.localized)
+            Text(detail.localized)
         }
     }
 }

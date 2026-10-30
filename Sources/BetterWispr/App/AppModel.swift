@@ -25,7 +25,7 @@ struct DictationFailure: Equatable {
     }
 
     static func releasedEarly(_ shortcut: DictationShortcut) -> DictationFailure {
-        DictationFailure(title: "Keep holding \(shortcut.displayName).", message: "Wait for the bars to move, then speak and release.")
+        DictationFailure(title: String(localized: "Keep holding \(shortcut.displayName)."), message: String(localized: "Wait for the bars to move, then speak and release."))
     }
     static let noSpeech = DictationFailure(title: "No speech heard.", message: "Move closer to your microphone and try again.")
     static let pasteBlocked = DictationFailure(title: "Copied, not pasted.", message: "Allow Accessibility so text lands at your cursor. Press ⌘V for now.", needsAccessibility: true)
@@ -66,7 +66,7 @@ struct ModelInstallation: Equatable {
     var failure: String?
 
     var progressLabel: String {
-        progress < 0.9 ? "Downloading… \(Int(progress / 0.9 * 100))%" : "Setting up on this Mac…"
+        progress < 0.9 ? String(localized: "Downloading… \(Int(progress / 0.9 * 100))%") : String(localized: "Setting up on this Mac…")
     }
 }
 
@@ -172,7 +172,7 @@ final class AppModel {
             vocabulary = state.vocabulary
         } catch {
             storageIsReadable = false
-            statusMessage = "Could not read your saved workspace. It has been left untouched: \(error.localizedDescription)"
+            statusMessage = String(localized: "Could not read your saved workspace. It has been left untouched: \(error.localizedDescription)")
         }
         guard startsServices else { return }
         applyAppearance()
@@ -214,7 +214,7 @@ final class AppModel {
         guard phase == .preparing || phase == .recording else { return }
         if Date().timeIntervalSince(pressedAt) < 0.3 {
             isHeldSession = false
-            if phase == .recording { statusMessage = "Listening. Press \(settings.shortcut.displayName) or click ✓ to finish." }
+            if phase == .recording { statusMessage = String(localized: "Listening. Press \(settings.shortcut.displayName) or click ✓ to finish.") }
         }
         else if phase == .preparing { abandon(.releasedEarly(settings.shortcut)) }
         else { finishRecording() }
@@ -225,7 +225,7 @@ final class AppModel {
             try globalShortcut.register(settings.shortcut)
             if statusMessage == shortcutWarning { statusMessage = "" }
         } catch {
-            statusMessage = "\(error.localizedDescription) Use the menu bar or Record button to dictate, or choose another shortcut in Settings."
+            statusMessage = String(localized: "\(error.localizedDescription) Use the menu bar or Record button to dictate, or choose another shortcut in Settings.")
             shortcutWarning = statusMessage
         }
     }
@@ -238,7 +238,7 @@ final class AppModel {
             try globalShortcut.register(shortcut)
         } catch {
             registerShortcut()
-            ToastWindow.shared.show(Toast(failure: "Couldn’t use \(shortcut.displayName)", error))
+            ToastWindow.shared.show(Toast(failure: String(localized: "Couldn’t use \(shortcut.displayName)"), error))
             return
         }
         if statusMessage == shortcutWarning { statusMessage = "" }
@@ -258,7 +258,7 @@ final class AppModel {
         correctionWatcher.stop()
         guard isModelInstalled(selectedModel) else {
             selectedPage = .models
-            fail(DictationFailure(title: "Download a model first.", message: "Download \(selectedModel.name) in Models before recording."))
+            fail(DictationFailure(title: String(localized: "Download a model first."), message: String(localized: "Download \(selectedModel.name) in Models before recording.")))
             return
         }
         targetApplication = NSWorkspace.shared.frontmostApplication
@@ -310,7 +310,7 @@ final class AppModel {
                 self.microphoneGranted = true
                 self.phase = .recording
                 let shortcut = self.settings.shortcut.displayName
-                self.statusMessage = self.isHeldSession ? "Listening. Release \(shortcut) to finish." : "Listening. Press \(shortcut) or click ✓ to finish."
+                self.statusMessage = self.isHeldSession ? String(localized: "Listening. Release \(shortcut) to finish.") : String(localized: "Listening. Press \(shortcut) or click ✓ to finish.")
                 self.warmUpSelectedModel()
                 self.warmUpNotesModel(token: token)
                 self.startLivePreview(live, model: model, token: token)
@@ -405,7 +405,7 @@ final class AppModel {
         let context = recording.context
         let appBundleID = recording.target?.bundleIdentifier
         phase = .transcribing
-        statusMessage = model.engine == .api ? "Transcribing with \(model.name)…" : "Transcribing on your Mac…"
+        statusMessage = model.engine == .api ? String(localized: "Transcribing with \(model.name)…") : String(localized: "Transcribing on your Mac…")
         operation = Task { [weak self] in
             defer {
                 if self?.generation == token { self?.activeRecording = nil }
@@ -437,7 +437,7 @@ final class AppModel {
                 if english, let email = EmailDictation.compose(spoken) {
                     spoken = email
                 } else if english, cleanup == .medium, MeetingNotesGenerator.availability(settings: writingSettings) == .available {
-                    self.statusMessage = "Editing with \(writingSettings.notesModelName)…"
+                    self.statusMessage = String(localized: "Editing with \(writingSettings.notesModelName)…")
                     let polished = await TranscriptPolisher.polish(spoken, settings: writingSettings, vocabulary: VocabularyProcessor.hints(entries),
                                                                    context: sharesContext ? await context?.value(within: .seconds(1)) : nil,
                                                                    instructions: mode?.instructions ?? "")
@@ -482,7 +482,7 @@ final class AppModel {
                     case .copiedForManualPaste: break
                     }
                 }
-                if let persistenceWarning { self.statusMessage = "History could not be saved: \(persistenceWarning)" }
+                if let persistenceWarning { self.statusMessage = String(localized: "History could not be saved: \(persistenceWarning)") }
             } catch {
                 guard self.generation == token else { return }
                 self.fail(DictationFailure(title: "Couldn’t transcribe.", message: error.localizedDescription))
@@ -632,28 +632,28 @@ final class AppModel {
             guard let self else { return }
             installer.onProgress = nil
             let boosterNote = model.engine == .parakeet && !self.phraseBoosterInstalled
-                ? " The phrase booster didn’t download. Get it in Vocabulary." : ""
+                ? String(localized: " The phrase booster didn’t download. Get it in Vocabulary.") : ""
             if self.settings.selectedModelID == selection, !self.isBusy {
                 self.selectModel(model, prepared: installer)
-                self.statusMessage = "\(model.name) is ready for offline dictation.\(boosterNote)"
+                self.statusMessage = String(localized: "\(model.name) is ready for offline dictation.\(boosterNote)")
             } else {
-                self.statusMessage = "\(model.name) is installed. Choose Use in Models to switch to it.\(boosterNote)"
+                self.statusMessage = String(localized: "\(model.name) is installed. Choose Use in Models to switch to it.\(boosterNote)")
             }
         }
     }
 
     func installPhraseBooster() {
         guard !isInstalling else { return }
-        install(id: Self.phraseBoosterID, name: "the phrase booster") { report in
+        install(id: Self.phraseBoosterID, name: String(localized: "the phrase booster")) { report in
             try await ParakeetProvider.installPhraseBooster { fraction in Task { @MainActor in report(fraction * 0.9) } }
         } completion: { [weak self] in
-            self?.statusMessage = "Parakeet now uses your vocabulary to spell names and terms."
+            self?.statusMessage = String(localized: "Parakeet now uses your vocabulary to spell names and terms.")
         }
     }
 
     func installSpeakerDetection() {
         guard !isInstalling else { return }
-        install(id: Self.speakerDetectionID, name: "speaker detection") { report in
+        install(id: Self.speakerDetectionID, name: String(localized: "speaker detection")) { report in
             try await SpeakerDetection.install { fraction in Task { @MainActor in report(fraction * 0.9) } }
         } completion: { [weak self] in
             self?.statusMessage = "New meetings will tell the speakers on the call apart."
@@ -673,7 +673,7 @@ final class AppModel {
     ) {
         let next = ModelInstallation(id: id)
         installation = next
-        statusMessage = "Downloading \(name)…"
+        statusMessage = String(localized: "Downloading \(name)…")
         let report: @MainActor @Sendable (Double) -> Void = { [weak self] progress in
             guard let self, let current = self.installation, current.token == next.token else { return }
             self.installation?.progress = max(current.progress, min(1, progress))
@@ -696,7 +696,7 @@ final class AppModel {
                 self.installTask = nil
                 self.refreshModels()
                 self.installation?.failure = error.localizedDescription
-                self.statusMessage = "Couldn’t download \(name): \(error.localizedDescription)"
+                self.statusMessage = String(localized: "Couldn’t download \(name): \(error.localizedDescription)")
             }
         }
     }
@@ -759,7 +759,7 @@ final class AppModel {
         }
         if let oldConnection, oldConnection.keychainAccount != connection.keychainAccount {
             do { try keys.save("", for: oldConnection) }
-            catch { statusMessage = "Connection saved, but its previous Keychain entry could not be removed: \(error.localizedDescription)" }
+            catch { statusMessage = String(localized: "Connection saved, but its previous Keychain entry could not be removed: \(error.localizedDescription)") }
         }
     }
 
@@ -904,7 +904,7 @@ final class AppModel {
         vocabulary.removeAll { $0.id == entry.id }
         do {
             try persist()
-            ToastWindow.shared.show(Toast(title: "Deleted", message: "“\(entry.phrase)” was removed from your vocabulary.", systemImage: "trash"))
+            ToastWindow.shared.show(Toast(title: String(localized: "Deleted"), message: String(localized: "“\(entry.phrase)” was removed from your vocabulary."), systemImage: "trash"))
         } catch {
             vocabulary = previous
             ToastWindow.shared.show(Toast(failure: "Couldn’t delete word", error))
@@ -947,7 +947,7 @@ final class AppModel {
             try persist()
         } catch {
             settings.launchAtLogin = SMAppService.mainApp.status == .enabled
-            statusMessage = "Could not save settings: \(error.localizedDescription)"
+            statusMessage = String(localized: "Could not save settings: \(error.localizedDescription)")
         }
         applyAppearance()
         if startsServices { meetingDetector.isEnabled = settings.detectMeetings }
@@ -975,7 +975,7 @@ final class AppModel {
     private func persist() throws {
         guard storageIsReadable else {
             throw NSError(domain: "BetterWispr", code: 1, userInfo: [NSLocalizedDescriptionKey:
-                "The existing workspace could not be read, so it will not be overwritten. Back it up in \(store.directory.path) and restart."])
+                String(localized: "The existing workspace could not be read, so it will not be overwritten. Back it up in \(store.directory.path) and restart.")])
         }
         var state = SavedState()
         state.settings = settings
@@ -995,7 +995,7 @@ final class AppModel {
             encoder.dateEncodingStrategy = .iso8601
             try encoder.encode(history).write(to: url, options: .atomic)
             statusMessage = "History exported."
-        } catch { statusMessage = "Export failed: \(error.localizedDescription)" }
+        } catch { statusMessage = String(localized: "Export failed: \(error.localizedDescription)") }
     }
 
     func requestMicrophone() {

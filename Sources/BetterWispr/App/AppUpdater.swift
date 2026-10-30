@@ -51,7 +51,7 @@ extension AppUpdater: SPUUpdaterDelegate {
                  immediateInstallationBlock immediateInstallHandler: @escaping () -> Void) -> Bool {
         relaunch = immediateInstallHandler
         pendingVersion = item.displayVersionString
-        ToastWindow.shared.show(Toast(title: "Update ready", message: "Restart BetterWispr to finish updating to \(item.displayVersionString).",
+        ToastWindow.shared.show(Toast(title: String(localized: "Update ready"), message: String(localized: "Restart BetterWispr to finish updating to \(item.displayVersionString)."),
                                       systemImage: "arrow.down.circle", action: Toast.Action(title: "Restart", perform: installUpdate)))
         return true
     }
@@ -67,7 +67,7 @@ extension AppUpdater: @preconcurrency SPUStandardUserDriverDelegate {
     func standardUserDriverWillHandleShowingUpdate(_ handleShowingUpdate: Bool, forUpdate update: SUAppcastItem, state: SPUUserUpdateState) {
         guard !handleShowingUpdate else { return }
         pendingVersion = update.displayVersionString
-        ToastWindow.shared.show(Toast(title: "Update available", message: "BetterWispr \(update.displayVersionString) is ready to install.",
+        ToastWindow.shared.show(Toast(title: String(localized: "Update available"), message: String(localized: "BetterWispr \(update.displayVersionString) is ready to install."),
                                       systemImage: "arrow.down.circle", action: Toast.Action(title: "Update", perform: installUpdate)))
     }
 

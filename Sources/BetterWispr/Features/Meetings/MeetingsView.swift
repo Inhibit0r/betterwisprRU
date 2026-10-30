@@ -12,7 +12,7 @@ struct MeetingsView: View {
             if let message = meetings.message {
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
                     Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.orange)
-                    Text(message).textSelection(.enabled)
+                    Text(message.localized).textSelection(.enabled)
                     Spacer(minLength: 0)
                     Button { meetings.message = nil } label: { Image(systemName: "xmark") }
                         .buttonStyle(.borderless)
@@ -140,7 +140,7 @@ private struct NotesHome: View {
                 } else {
                     ForEach(MeetingSection.group(filtered), id: \.title) { section in
                         VStack(alignment: .leading, spacing: 2) {
-                            Text(section.title)
+                            Text(section.title.localized)
                                 .font(.caption.weight(.semibold))
                                 .tracking(1)
                                 .textCase(.uppercase)
@@ -199,7 +199,7 @@ private struct NotetakerSettings: View {
                 }
             )) {
                 ForEach(model.models) { speechModel in
-                    Text(speechModel.name + (model.isModelInstalled(speechModel) ? "" : " · Download in Models"))
+                    Text(speechModel.name + (model.isModelInstalled(speechModel) ? "" : String(localized: " · Download in Models")))
                         .tag(speechModel.id)
                         .disabled(!model.isModelInstalled(speechModel))
                 }
@@ -245,12 +245,12 @@ private struct NoteRow: View {
                 .frame(width: 38, height: 38)
                 .background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: 9, style: .continuous))
             VStack(alignment: .leading, spacing: 3) {
-                Text(meeting.displayTitle).font(.system(size: 15)).lineLimit(1)
+                Text(meeting.displayTitle.localized).font(.system(size: 15)).lineLimit(1)
                 HStack(spacing: 5) {
                     Text(meeting.createdAt.formatted(date: .omitted, time: .shortened))
                     if let status {
                         Text("•")
-                        Text(status).foregroundStyle(meetings.activity.capturingID == meeting.id ? .green : .secondary)
+                        Text(status.localized).foregroundStyle(meetings.activity.capturingID == meeting.id ? .green : .secondary)
                     } else if canSummarize {
                         Text("•")
                         Button("Generate summary") { meetings.generateNotes(meeting.id) }
@@ -307,7 +307,7 @@ private struct CurrentNote: View {
         VStack(alignment: .leading, spacing: 12) {
             if let meeting = (meetings.activity.meetingID ?? meetings.meetings.first?.id).flatMap(meetings.meeting) {
                 Button { meetings.selectedID = meeting.id } label: {
-                    Text(meeting.displayTitle)
+                    Text(meeting.displayTitle.localized)
                         .font(.system(size: 20, weight: .semibold))
                         .multilineTextAlignment(.leading)
                 }
@@ -363,7 +363,7 @@ extension AppModel {
         let speechModel = selectedModel
         guard isModelInstalled(speechModel) else {
             selectedPage = .models
-            statusMessage = "Download \(speechModel.name) in Models before starting meeting notes."
+            statusMessage = String(localized: "Download \(speechModel.name) in Models before starting meeting notes.")
             return
         }
         selectedPage = .meetings

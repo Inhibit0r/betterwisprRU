@@ -97,7 +97,7 @@ struct ModelsView: View {
                     }
                     if let installation {
                         if installing { ProgressView(value: installation.progress) }
-                        Text(installation.failure.map { "Download stopped: \($0)" } ?? installation.progressLabel)
+                        Text(installation.failure.map { String(localized: "Download stopped: \($0)") } ?? installation.progressLabel)
                             .font(.caption)
                             .foregroundStyle(installing ? AnyShapeStyle(.secondary) : AnyShapeStyle(.red))
                     }
@@ -147,16 +147,16 @@ struct ModelsView: View {
                         badge("Recommended", color: .accentColor)
                     }
                 }
-                Text(speechModel.detail)
+                Text(speechModel.detail.localized)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
-                Text("\(speechModel.sizeLabel) · \(engineLabel(speechModel.engine))")
+                Text("\(speechModel.sizeLabel.localized) · \(engineLabel(speechModel.engine))")
                     .font(.caption)
                     .foregroundStyle(.tertiary)
                 if let installation {
                     if installing { ProgressView(value: installation.progress).padding(.top, 4) }
-                    Text(installation.failure.map { "Download stopped: \($0)" } ?? installation.progressLabel)
+                    Text(installation.failure.map { String(localized: "Download stopped: \($0)") } ?? installation.progressLabel)
                         .font(.caption)
                         .foregroundStyle(installing ? AnyShapeStyle(.secondary) : AnyShapeStyle(.red))
                 }
@@ -181,7 +181,7 @@ struct ModelsView: View {
     }
 
     private func badge(_ title: String, color: Color) -> some View {
-        Text(title)
+        Text(title.localized)
             .font(.caption.weight(.medium))
             .foregroundStyle(color)
             .padding(.horizontal, 6)
@@ -191,10 +191,10 @@ struct ModelsView: View {
 
     private func engineLabel(_ engine: SpeechEngine) -> String {
         switch engine {
-        case .apple: "System speech"
+        case .apple: "System speech".localized
         case .whisperKit: "WhisperKit · Apple Silicon"
         case .parakeet: "Parakeet · Neural Engine"
-        case .api: "API connection"
+        case .api: "API connection".localized
         }
     }
 }

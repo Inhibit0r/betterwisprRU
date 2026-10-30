@@ -17,6 +17,7 @@ struct BetterWisprApp: App {
                         .transition(.opacity)
                 }
             }
+            .overlay { LanguageChoiceGate() } // Fork: asks for the interface language once.
             .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
                 delegate.model.refreshPermissions()
             }
@@ -81,7 +82,7 @@ private struct MenuContents: View {
     @Environment(\.openWindow) private var openWindow
 
     var body: some View {
-        Text(status)
+        Text(status.localized)
         Button { model.toggleRecording() } label: {
             Text(model.phase == .recording ? "Finish Dictation" : "Start Dictation")
             Text(model.settings.shortcut.displayName)

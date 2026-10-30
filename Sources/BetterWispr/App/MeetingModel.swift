@@ -67,7 +67,7 @@ final class MeetingModel {
         recorder.onChunk = { [weak self] in self?.enqueue($0) }
         recorder.onLevels = { [weak self] in self?.receive($0) }
         recorder.onMicrophone = { [weak self] in self?.microphone = $0 }
-        recorder.onError = { [weak self] in self?.message = "Part of the recording couldn’t be saved: \($0.localizedDescription)" }
+        recorder.onError = { [weak self] in self?.message = String(localized: "Part of the recording couldn’t be saved: \($0.localizedDescription)") }
     }
 
     func meeting(_ id: UUID) -> Meeting? { meetings.first { $0.id == id } }
@@ -118,7 +118,7 @@ final class MeetingModel {
                 self.discardVoices()
                 self.provider = nil
                 self.activity = .idle
-                if !(error is CancellationError) { self.message = "Couldn’t start the meeting. \(error.localizedDescription)" }
+                if !(error is CancellationError) { self.message = String(localized: "Couldn’t start the meeting. \(error.localizedDescription)") }
                 self.discardIfEmpty(meeting.id)
             }
         }
@@ -215,7 +215,7 @@ final class MeetingModel {
         do {
             try store.delete(id: id)
         } catch {
-            message = "Couldn’t delete the meeting. \(error.localizedDescription)"
+            message = String(localized: "Couldn’t delete the meeting. \(error.localizedDescription)")
             return
         }
         meetings.removeAll { $0.id == id }
@@ -272,7 +272,7 @@ final class MeetingModel {
         } catch {
             guard session == token else { return }
             if !(error is CancellationError), !detection.isCancelled {
-                message = "Couldn’t tell the speakers on the call apart. \(error.localizedDescription)"
+                message = String(localized: "Couldn’t tell the speakers on the call apart. \(error.localizedDescription)")
             }
         }
         self.detection = nil
@@ -310,7 +310,7 @@ final class MeetingModel {
             saveNow(id)
         } catch {
             guard session == token else { return }
-            if !(error is CancellationError) { message = "Couldn’t write notes. \(error.localizedDescription)" }
+            if !(error is CancellationError) { message = String(localized: "Couldn’t write notes. \(error.localizedDescription)") }
         }
         generationStep = nil
         activity = .idle
@@ -356,7 +356,7 @@ final class MeetingModel {
             } catch {
                 guard session == token else { return }
                 if !(error is CancellationError) {
-                    message = "A few seconds from \(chunk.speaker.label) couldn’t be transcribed. \(error.localizedDescription)"
+                    message = String(localized: "A few seconds from \(chunk.speaker.label) couldn’t be transcribed. \(error.localizedDescription)")
                 }
             }
         }
@@ -404,7 +404,7 @@ final class MeetingModel {
     private func saveNow(_ id: UUID) {
         saves.removeValue(forKey: id)?.cancel()
         guard let meeting = meeting(id) else { return }
-        do { try store.save(meeting) } catch { message = "This meeting couldn’t be saved. \(error.localizedDescription)" }
+        do { try store.save(meeting) } catch { message = String(localized: "This meeting couldn’t be saved. \(error.localizedDescription)") }
     }
 
     private func discardIfEmpty(_ id: UUID) {
