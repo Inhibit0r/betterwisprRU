@@ -16,7 +16,7 @@ chmod -R u+w "$app"
 cp "$binary_dir/BetterWispr" "$app/Contents/MacOS/BetterWispr"
 cp Resources/Info.plist "$app/Contents/Info.plist"
 version="$(tr -d '[:space:]' < VERSION)"
-/usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $version" -c "Set :CFBundleVersion $version" "$app/Contents/Info.plist"
+/usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $version" -c "Set :CFBundleVersion ${FORK_BUILD_VERSION:-$version}" "$app/Contents/Info.plist"
 icon_sources=(Sources/BetterWispr/Design/BrandMark.swift scripts/render-app-icon.swift)
 icon=.build/AppIcon.icns
 if [[ ! -f "$icon" || "${icon_sources[0]}" -nt "$icon" || "${icon_sources[1]}" -nt "$icon" ]]; then

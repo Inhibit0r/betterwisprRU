@@ -60,6 +60,7 @@ struct BetterWisprApp: App {
                     Image(nsImage: BrandGlyph.menuBarImage)
                 }
             }
+            .background(OpenSettingsListener(model: delegate.model)) // Fork: ⇧⌘ opens Settings.
         }
     }
 }
@@ -144,6 +145,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     let model = AppModel()
     private var capsule: CapsuleController?
     private var notetaker: NotetakerController?
+    private var settingsChord: SettingsChord?
     private var started = false
 
     func applicationWillFinishLaunching(_ notification: Notification) {
@@ -162,7 +164,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         model.onPresentationChange = { [weak self] in self?.capsule?.update() }
         notetaker = NotetakerController(model: model)
         model.onShowNotetaker = { [weak self] in self?.notetaker?.show($0) }
+        ForkDefaults.applyOnFirstRun(model) // Fork: Right Command and no idle capsule for new installs.
         model.registerShortcut()
+        settingsChord = SettingsChord(model: model)
         capsule?.update()
     }
 

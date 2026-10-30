@@ -91,6 +91,15 @@ jobs:
           [ "$(git rev-parse 'HEAD^{tree}')" = "$TREE" ] || { echo "tree-mismatch: дерево отличается от проверенного"; exit 1; }
           git push origin "HEAD:refs/heads/$TARGET"
 
+  # Пуш токеном Actions не запускает другие workflow, поэтому релиз форка вызывается отсюда явно.
+  release:
+    needs: push
+    if: needs.push.result == 'success' && (inputs.target_branch || 'orb') == 'orb'
+    uses: ./.github/workflows/release-fork.yml
+    permissions:
+      contents: write
+    secrets: inherit
+
   report:
     needs: [merge, push]
     if: always()

@@ -1,0 +1,105 @@
+# Выпускает сборку форка: релиз с DMG и appcast.xml, по которому «Проверить обновления…» в приложении
+# находит новую версию. Код собирается в задании без секретов; ключ EdDSA есть только в задании publish,
+# которое код репозитория не запускает — только скачанный DMG и официальный sign_update Sparkle.
+name: release-fork
+
+on:
+  push:
+    branches: [orb]
+    paths-ignore: ['docs/**', '**/*.md', '.github/workflows/sync-upstream.yml']
+  workflow_dispatch:
+  workflow_call:
+
+concurrency:
+  group: release-fork
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: macos-26
+    permissions:
+      contents: read
+    outputs:
+      version: ${{ steps.build.outputs.version }}
+      build: ${{ steps.build.outputs.build }}
+      sha: ${{ steps.build.outputs.sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'push' && github.sha || 'orb' }}
+          persist-credentials: false
+      - name: Собрать приложение и DMG
+        id: build
+        run: |
+          set -euo pipefail
+          version="$(tr -d '[:space:]' < VERSION)"
+          [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "странная версия: $version"; exit 1; }
+          # Номер растёт со временем, а не со счётчиком запуска: у вызова из sync-upstream счётчик свой.
+          build="$version.$(date -u +%Y%m%d%H%M)"
+          app="$(FORK_BUILD_VERSION="$build" CODESIGN_IDENTITY=- ./scripts/build-app.sh release | tail -1)"
+          mkdir -p release/staging
+          ditto "$app" release/staging/BetterWispr.app
+          ln -s /Applications release/staging/Applications
+          hdiutil create -volname BetterWispr -srcfolder release/staging -format UDZO -ov "release/BetterWispr-$build.dmg"
+          { echo "version=$version"; echo "build=$build"; echo "sha=$(git rev-parse HEAD)"; } >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dmg
+          path: release/*.dmg
+          if-no-files-found: error
+          retention-days: 3
+
+  publish:
+    needs: build
+    runs-on: macos-26
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      VERSION: ${{ needs.build.outputs.version }}
+      BUILD: ${{ needs.build.outputs.build }}
+      SHA: ${{ needs.build.outputs.sha }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dmg
+          path: release
+      - name: Подписать обновление и выпустить релиз
+        env:
+          SPARKLE_ED_PRIVATE_KEY: ${{ secrets.SPARKLE_ED_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          [ -n "$SPARKLE_ED_PRIVATE_KEY" ] || { echo "нет секрета SPARKLE_ED_PRIVATE_KEY — см. docs/orb-fork.md"; exit 1; }
+          # Выходы задания build пишет шаг, где работает код upstream, поэтому здесь их проверяют строго.
+          [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ && "$BUILD" =~ ^$VERSION\.[0-9]{12}$ && "$SHA" =~ ^[0-9a-f]{40}$ ]] \
+            || { echo "странные выходы сборки: $VERSION $BUILD $SHA"; exit 1; }
+          curl -sSLo sparkle.tar.xz https://github.com/sparkle-project/Sparkle/releases/download/2.10.0/Sparkle-2.10.0.tar.xz
+          echo "c2bf58aa8387266ac179357b1415d6f2635f044da8be41042af32425dae6da0c  sparkle.tar.xz" | shasum -a 256 -c -
+          mkdir sparkle && tar -xJf sparkle.tar.xz -C sparkle
+          dmg="release/BetterWispr-$BUILD.dmg"
+          signature="$(printf '%s' "$SPARKLE_ED_PRIVATE_KEY" | sparkle/bin/sign_update --ed-key-file - "$dmg")"
+          [[ "$signature" =~ ^sparkle:edSignature=\"[A-Za-z0-9+/=]+\"\ length=\"[0-9]+\"$ ]] || { echo "sign_update не подписал"; exit 1; }
+          tag="v$VERSION-fork.${BUILD##*.}"
+          base="https://github.com/$GITHUB_REPOSITORY/releases"
+          cat > release/appcast.xml <<EOF
+          <?xml version="1.0" encoding="utf-8"?>
+          <rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
+              <channel>
+                  <title>BetterWispr</title>
+                  <item>
+                      <title>Version $VERSION ($BUILD)</title>
+                      <pubDate>$(LC_ALL=C date -u '+%a, %d %b %Y %H:%M:%S +0000')</pubDate>
+                      <link>$base/tag/$tag</link>
+                      <sparkle:version>$BUILD</sparkle:version>
+                      <sparkle:shortVersionString>$VERSION</sparkle:shortVersionString>
+                      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+                      <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
+                      <enclosure url="$base/download/$tag/BetterWispr-$BUILD.dmg" type="application/octet-stream" $signature/>
+                  </item>
+              </channel>
+          </rss>
+          EOF
+          gh release create "$tag" --repo "$GITHUB_REPOSITORY" --target "$SHA" --latest \
+            --title "BetterWispr $VERSION ($BUILD)" \
+            --notes "Сборка форка с орбом и русским интерфейсом, коммит $SHA. Только Apple Silicon; подпись ad-hoc — при первой установке «Открыть всё равно» в «Конфиденциальность и безопасность». Установленное приложение обновляется само: «Проверить обновления…» в строке меню." \
+            "$dmg" release/appcast.xml
