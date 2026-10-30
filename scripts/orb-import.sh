@@ -23,8 +23,10 @@ patch() {
 patch 'Prismatic Field: высота волн от голоса' 's/float amplitude_2 = 0\.26 \+ \(_e13 \* 0\.27\);/float amplitude_2 = (0.26 + (_e13 * 0.27)) * (0.3 + 1.2 * u.particleDensity);/'
 patch 'Siri Wave: высота волн от голоса' 's/float mainAmplitude = (\(0\.25 \+ \(_e50 \* 0\.075\)\) \+ \(low \* 0\.018\));/float mainAmplitude = ($1) * (0.3 + 1.2 * u.particleDensity);/'
 patch 'громкость в particleDensity' 's/(\n    func level\(_ value: Float\) -> Float \{[^\n]*\}\n)/$1    values[32] = level(bands.all)\n/'
-# Styles and colours chosen in Settings → Orb replace the baked seeds (Sources/LiquidOrb/LiquidOrbSeeds.swift).
+# Styles and colours chosen in Settings → Orb replace the baked seeds; the voice level is read per frame
+# instead of through a SwiftUI update per frame (Sources/LiquidOrb/LiquidOrbHooks.swift).
 patch 'подмена параметров стиля' 's/(\nprivate func orbUniformSeed\(for state: LiquidOrbState\) -> \[Float\] \{\n)    switch state \{\n/$1    if let seeds = LiquidOrbSeeds.current { return state == .idle ? seeds.idle : seeds.thinking }\n    return switch state {\n/'
+patch 'громкость читается при отрисовке' 's/\n        applyOrbAudio\(&uniforms, audio\)\n/\n        applyOrbAudio(&uniforms, LiquidOrbAudioSource.current?() ?? audio)\n/'
 
 cp "$target" "$target.bak"
 cp "$export_file" "$target"

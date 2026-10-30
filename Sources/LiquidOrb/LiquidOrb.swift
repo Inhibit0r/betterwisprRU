@@ -2242,7 +2242,7 @@ private final class LiquidOrbRenderer: NSObject, MTKViewDelegate {
         let now = CACurrentMediaTime()
         stateLock.lock()
         var uniforms = sampleTransition(at: now)
-        applyOrbAudio(&uniforms, audio)
+        applyOrbAudio(&uniforms, LiquidOrbAudioSource.current?() ?? audio)
         stateLock.unlock()
         let frameDelta = min(0.1, max(0, now - lastFrameAt))
         lastFrameAt = now

@@ -3,3 +3,9 @@
 public enum LiquidOrbSeeds {
     nonisolated(unsafe) public static var current: (idle: [Float], thinking: [Float])?
 }
+
+/// Fork: the voice level, read by the orb on every frame it draws (main thread). Feeding audio through the view's
+/// `audio` argument instead needs a SwiftUI update per frame, which measured about twice the CPU at the same 60 fps.
+public enum LiquidOrbAudioSource {
+    nonisolated(unsafe) public static var current: (() -> LiquidOrbAudio)?
+}

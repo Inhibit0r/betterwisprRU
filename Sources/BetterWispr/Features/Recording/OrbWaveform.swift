@@ -33,12 +33,15 @@ struct OrbWaveform: View {
             let appearance = OrbAppearance.current
             let size = compact ? Self.compactDiameter : CGFloat(appearance.size)
             let _ = appearance.install()
-            TimelineView(.animation) { context in
-                LiquidOrbView(state: state, audio: audio(at: context.date, sensitivity: Float(appearance.sensitivity)))
-            }
-            .frame(width: size, height: size)
-            .frame(width: compact ? 28 : size, height: compact ? 14 : size)
-            .allowsHitTesting(false)
+            // The orb redraws itself at 60 fps and asks for the level per frame; this body only runs when levels change.
+            let _ = (LiquidOrbAudioSource.current = { [mode, smoothing] in
+                Self.audio(for: mode, at: .now, smoothing: smoothing, sensitivity: Float(appearance.sensitivity))
+            })
+            LiquidOrbView(state: state)
+                .frame(width: size, height: size)
+                .frame(width: compact ? 28 : size, height: compact ? 14 : size)
+                .allowsHitTesting(false)
+                .onDisappear { LiquidOrbAudioSource.current = nil }
         } else {
             Waveform(mode: mode, animated: animated, count: count)
         }
@@ -49,7 +52,7 @@ struct OrbWaveform: View {
     }
 
     /// VoiceLevels carries one broadband level, so every orb band follows it.
-    private func audio(at date: Date, sensitivity: Float) -> LiquidOrbAudio {
+    private static func audio(for mode: Waveform.Mode, at date: Date, smoothing: LevelSmoothing, sensitivity: Float) -> LiquidOrbAudio {
         guard case .listening(let levels) = mode else { return LiquidOrbAudio() }
         let level = min(1, smoothing.next(levels.value(at: date)) * sensitivity)
         return LiquidOrbAudio(low: level, mid: level, high: level, all: level)
