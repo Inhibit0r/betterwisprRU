@@ -139,20 +139,17 @@ private struct VisualizerCard<Thumbnail: View>: View {
                     .frame(height: 64)
                     .frame(maxWidth: .infinity)
                     .background(Color.black.opacity(0.85), in: .rect(cornerRadius: 8, style: .continuous))
-                // Two lines reserved for each, so every card in a row has the same height whatever the wording.
                 VStack(spacing: 2) {
-                    Text(title.localized).font(.callout.weight(.semibold))
-                        .lineLimit(2, reservesSpace: true)
-                        .fixedSize(horizontal: false, vertical: true)
-                    Text(subtitle.localized).font(.caption).foregroundStyle(.secondary)
-                        .lineLimit(2, reservesSpace: true)
-                        .minimumScaleFactor(0.75)
-                        .fixedSize(horizontal: false, vertical: true)
+                    Text(title.localized).font(.callout.weight(.semibold)).lineLimit(2)
+                    Text(subtitle.localized).font(.caption).foregroundStyle(.secondary).lineLimit(2)
                 }
                 .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: .infinity)
             }
             .padding(10)
+            // Fills the grid row, so cards stay the same height while the subtitle sits right under the title.
+            .frame(maxHeight: .infinity, alignment: .top)
             .background(isSelected ? Color.accentColor.opacity(0.12) : Color.primary.opacity(0.04), in: .rect(cornerRadius: 10, style: .continuous))
             .overlay {
                 RoundedRectangle(cornerRadius: 10, style: .continuous)
