@@ -110,11 +110,13 @@ private struct MenuContents: View {
         MicrophonePicker(model: model) { Text("Microphone") }
         Divider()
         Button("Open Dashboard", action: openDashboard)
-        Button("Settings…") {
+        Button {
             model.selectedPage = .settings
             openDashboard()
+        } label: {
+            Text("Settings…")
+            Text(verbatim: "⇧⌘") // Fork: the SettingsChord; a menu can't show a modifier-only key equivalent.
         }
-        .keyboardShortcut(",")
         if let version = model.updater.pendingVersion {
             Button("Install BetterWispr \(version)…") { model.updater.installUpdate() }
         } else {

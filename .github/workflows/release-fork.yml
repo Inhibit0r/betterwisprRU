@@ -5,7 +5,7 @@ name: release-fork
 
 on:
   push:
-    branches: [orb]
+    branches: [main]
     paths-ignore: ['docs/**', '**/*.md', '.github/workflows/sync-upstream.yml']
   workflow_dispatch:
   workflow_call:
@@ -26,7 +26,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event_name == 'push' && github.sha || 'orb' }}
+          ref: ${{ github.event_name == 'push' && github.sha || 'main' }}
           persist-credentials: false
       - name: Собрать приложение и DMG
         id: build

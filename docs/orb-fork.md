@@ -26,24 +26,24 @@
 | `Tests/BetterWisprCoreTests/OrbAppearanceTests.swift` | Параметры каждого стиля полные и с верным номером стиля; скорость, стекло и цвета попадают в нужные ячейки. |
 | `Tests/BetterWisprCoreTests/CapsulePlacementTests.swift` | Позиции капсулы: штатная по центру, углы, «над указателем» фиксируется в начале диктовки, даже когда капсула видна постоянно, и не едет за мышью. |
 | `Tests/BetterWisprCoreTests/LiquidOrbShaderTests.swift` | Компилирует шейдер орба: сломанный экспорт роняет приложение при первой диктовке, тест ловит это раньше. |
-| `.github/workflows/sync-upstream.yml` | Ежедневно вливает новый релиз upstream в ветку `orb`. |
+| `.github/workflows/sync-upstream.yml` | Ежедневно вливает новый релиз upstream в ветку `main` и выпускает релиз форка. |
 | `scripts/orb-update.sh` | Локально: показывает новое в форке, спрашивает, пересобирает и ставит в `/Applications`. |
 | `scripts/orb-import.sh` | Ставит новый экспорт орба из редактора. |
 | `scripts/orb-seeds.sh` | Печатает параметры стиля из выгрузки — для `OrbStyleSeeds.swift`. |
 
-Ветка `orb` — основная ветка форка. `main` форка не используется.
+Репозиторий — `Inhibit0r/betterwisprRU` (до 30.10.2026 — `betterwispr`, ветка `orb`); основная ветка — `main`.
 
 ## Как приходят обновления BetterWispr
 
 1. GitHub Action `sync-upstream` раз в сутки (04:23 UTC) берёт последний тег
-   upstream `vX.Y.Z`, вливает его в `orb`, проверяет, что хук орба на месте и
+   upstream `vX.Y.Z`, вливает его в `main`, проверяет, что хук орба на месте и
    приложение собирается (`macos-26`), и только тогда пушит. Force push не используется.
-2. Конфликт или поломка сборки → ветка `orb` не меняется, в форке открывается
+2. Конфликт или поломка сборки → ветка `main` не меняется, в форке открывается
    issue `sync orb vX.Y.Z: conflict|build`. Следующий удачный прогон закрывает его.
 3. Удачное вливание сразу вызывает `release-fork`: сборка (без секретов) → DMG →
    подпись EdDSA в отдельном задании, которое код репозитория не запускает → релиз
    `vX.Y.Z-fork.<время UTC>` с DMG и `appcast.xml`. Тот же релиз собирается при каждом
-   пуше в `orb` (кроме документации).
+   пуше в `main` (кроме документации).
 4. Приложение само: раз в сутки или по «Проверить обновления…» в строке меню находит релиз
    по `SUFeedURL` (последний релиз форка), проверяет подпись и ставит. Номер сборки
    `X.Y.Z.<ГГГГММДДччмм>` всегда больше, чем у локальной сборки `X.Y.Z`.
@@ -57,10 +57,10 @@
 
 ```bash
 .build/artifacts/sparkle/Sparkle/bin/generate_keys --account betterwispr-fork -x /tmp/k \
-  && gh secret set SPARKLE_ED_PRIVATE_KEY -R Inhibit0r/betterwispr < /tmp/k && rm /tmp/k
+  && gh secret set SPARKLE_ED_PRIVATE_KEY < /tmp/k && rm /tmp/k   # из клона форка
 ```
 
-Ручной запуск синхронизации: `gh workflow run sync-upstream -R Inhibit0r/betterwispr`
+Ручной запуск синхронизации: `gh workflow run sync-upstream -R Inhibit0r/betterwisprRU`
 (можно `-f tag=v0.1.6`).
 
 ### Если пришёл issue о конфликте
@@ -83,7 +83,7 @@ git push origin orb
    Скрипт чинит известную ошибку экспорта (`discard_fragment()` без `metal::`
    не компилируется на macOS 26), накладывает голосовые волны и проверяет шейдер;
    при ошибке оставляет прежний орб.
-4. `scripts/orb-update.sh --reinstall`, затем закоммитить и запушить `orb`.
+4. `scripts/orb-update.sh --reinstall`, затем закоммитить и запушить `main`.
 
 ### Голосовые волны
 
@@ -156,7 +156,7 @@ Shift+Command, нажатые вместе и отпущенные без дру
 
 ## Русский интерфейс
 
-С 30.10.2026 ветка `orb` стоит на `main` upstream (0.1.6 до релиза), а не на теге, и несёт перевод:
+С 30.10.2026 ветка `main` форка стоит на `main` upstream (0.1.6 до релиза), а не на теге, и несёт перевод:
 
 - `Resources/ru.lproj/Localizable.strings` — перевод (ключ = английская строка), `InfoPlist.strings` — тексты
   окон разрешений; `Resources/en.lproj` и `CFBundleDevelopmentRegion` нужны, чтобы выбор English работал на

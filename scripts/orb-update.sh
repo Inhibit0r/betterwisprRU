@@ -1,9 +1,9 @@
 #!/bin/bash
-# Fork: offers the orb branch that sync-upstream advanced, then rebuilds and reinstalls BetterWispr.
+# Fork: offers the main branch that sync-upstream advanced, then rebuilds and reinstalls BetterWispr.
 set -euo pipefail
 cd "$(dirname "$0")/.."
-git fetch --quiet origin orb
-news="$(git log --oneline --no-merges HEAD..origin/orb)"
+git fetch --quiet origin main
+news="$(git log --oneline --no-merges HEAD..origin/main)"
 if [[ -z "$news" && "${1:-}" != --reinstall ]]; then
     echo "Форк актуален: BetterWispr $(tr -d '[:space:]' < VERSION) с орбом. Пересобрать без обновления: $0 --reinstall"
     exit 0
@@ -13,7 +13,7 @@ if [[ -n "$news" ]]; then
     echo "$news"
     read -r -p "Обновить и переустановить BetterWispr? [y/N] " answer
     [[ "$answer" == [yY]* ]] || exit 0
-    git merge --no-edit origin/orb
+    git merge --no-edit origin/main
 fi
 # Gatekeeper's online check moved an Apple Development-signed build to the Trash as malware; ad-hoc runs, but Accessibility must be re-granted after each rebuild.
 app="$(CODESIGN_IDENTITY="${CODESIGN_IDENTITY:--}" ./scripts/build-app.sh release | tail -1)"
