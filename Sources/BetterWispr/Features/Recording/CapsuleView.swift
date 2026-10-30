@@ -100,7 +100,7 @@ struct CapsuleView: View {
                 notetakingPill
                     .transition(swap)
             } else if model.isBusy {
-                dictationPill
+                dictationPill.padding(OrbWaveform.pillPadding(animated: !reduceMotion))
                     .transition(swap)
             } else if showsToolbar {
                 controls
@@ -450,7 +450,7 @@ struct CapsuleView: View {
         .foregroundStyle(.white)
         .buttonStyle(.plain)
         .padding(.horizontal, 4)
-        .frame(width: (model.isHeldSession ? 96 : 108) + OrbWaveform.pillExtraWidth(animated: !reduceMotion), height: OrbWaveform.pillHeight(animated: !reduceMotion))
+        .frame(width: model.isHeldSession ? 96 : 108, height: 28)
         .contentShape(Capsule())
         .contextMenu { Button("Cancel dictation", action: model.cancelRecording) }
         .accessibilityActions { Button("Cancel dictation", action: model.cancelRecording) }

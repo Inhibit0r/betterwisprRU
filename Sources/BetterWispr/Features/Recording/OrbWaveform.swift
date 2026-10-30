@@ -17,9 +17,14 @@ struct OrbWaveform: View {
     private static let hasMetal = MTLCreateSystemDefaultDevice() != nil
 
     static func isShown(animated: Bool) -> Bool { animated && hasMetal }
-    /// The dictation pill grows to hold the orb; upstream sizes apply when the bars are shown.
+    /// The orb widens the 28 pt dictation pill past its fixed frame; this padding grows the capsule glass around it
+    /// without touching upstream's frame line.
+    static func pillPadding(animated: Bool) -> EdgeInsets {
+        guard isShown(animated: animated) else { return EdgeInsets() }
+        let vertical = (pillHeight(animated: animated) - 28) / 2
+        return EdgeInsets(top: vertical, leading: 18, bottom: vertical, trailing: 18)
+    }
     static func pillHeight(animated: Bool) -> CGFloat { isShown(animated: animated) ? diameter + 8 : 28 }
-    static func pillExtraWidth(animated: Bool) -> CGFloat { isShown(animated: animated) ? diameter - 36 : 0 }
 
     var body: some View {
         if Self.isShown(animated: animated) {
