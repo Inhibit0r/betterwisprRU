@@ -506,7 +506,7 @@ metal::float3 glsSiriFluid(
     float high = 0.5 + (0.5 * metal::cos((t_2 * 0.73) + 2.1));
     float drift_1 = t_2 * 2.4;
     float _e50 = u.ridgeAmt;
-    float mainAmplitude = ((0.25 + (_e50 * 0.075)) + (low * 0.018)) * (0.3 + 1.2 * u.particleDensity);
+    float mainAmplitude = (0.25 + (_e50 * 0.075)) + (low * 0.018);
     float bandAmplitude = (mainAmplitude + (mid * 0.025)) + (high * 0.018);
     float mainY_1 = (mainAmplitude * envelope_1) * metal::sin((q_5.x * 1.1) + drift_1);
     float _e73 = u.warp;
