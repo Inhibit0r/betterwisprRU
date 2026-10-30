@@ -23,7 +23,9 @@ enum CapsulePlacement: String, CaseIterable {
     /// Origin of the capsule panel, whose content sits centered 16 pt above its bottom edge.
     /// Above the pointer is read when a dictation starts and kept until the capsule is back at rest, so it does not
     /// follow the pointer; the always-visible resting capsule never hides, so the panel's visibility cannot mark the start.
-    @MainActor func origin(in screen: NSRect, pointer: NSPoint, panel: NSRect, dictating: Bool) -> NSPoint {
+    /// `starting` (the preparing phase) drops the previous spot: a hidden capsule never passes through rest to clear it.
+    @MainActor func origin(in screen: NSRect, pointer: NSPoint, panel: NSRect, dictating: Bool, starting: Bool = false) -> NSPoint {
+        if starting { Self.cursorAnchor = nil }
         let bottomCenter = NSPoint(x: screen.midX - panel.width / 2, y: screen.minY + 12)
         guard self == .cursor, dictating else {
             Self.cursorAnchor = nil

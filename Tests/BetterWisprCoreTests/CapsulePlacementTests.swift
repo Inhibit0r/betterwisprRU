@@ -28,3 +28,15 @@ import Testing
     // The next dictation reads the pointer again.
     #expect(CapsulePlacement.cursor.origin(in: screen, pointer: moved, panel: resting, dictating: true) == NSPoint(x: 980, y: 298))
 }
+
+/// With "Floating recording capsule" off the panel hides after a dictation without passing through rest, so the next
+/// dictation must still read the pointer when it starts instead of reusing the previous spot.
+@MainActor @Test func cursorPlacementReadsThePointerAgainWhenTheNextDictationStartsAfterAHiddenCapsule() {
+    let screen = NSRect(x: 0, y: 25, width: 1440, height: 850)
+    let panel = NSRect(x: 500, y: 37, width: 440, height: 240)
+    let first = NSPoint(x: 700, y: 500), second = NSPoint(x: 1200, y: 300)
+    #expect(CapsulePlacement.cursor.origin(in: screen, pointer: first, panel: panel, dictating: true, starting: true) == NSPoint(x: 480, y: 498))
+    #expect(CapsulePlacement.cursor.origin(in: screen, pointer: second, panel: panel, dictating: true) == NSPoint(x: 480, y: 498))
+    // The capsule hid here; the next dictation starts with the pointer elsewhere.
+    #expect(CapsulePlacement.cursor.origin(in: screen, pointer: second, panel: panel, dictating: true, starting: true) == NSPoint(x: 980, y: 298))
+}

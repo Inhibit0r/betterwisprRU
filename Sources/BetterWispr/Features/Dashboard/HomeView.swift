@@ -108,6 +108,7 @@ struct HomeView: View {
 }
 
 private struct DictationPanel: View {
+    @Environment(\.windowIsVisible) private var windowIsVisible // Fork
     let model: AppModel
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -173,17 +174,18 @@ private struct DictationPanel: View {
     @ViewBuilder private var detail: some View {
         if recording {
             HStack(spacing: 12) {
-                Waveform(mode: .listening(model.voiceLevels), animated: !reduceMotion, color: .red, count: 24)
+                // Fork: a closed window must not read per-frame levels — it re-lays out the whole window each frame.
+                Waveform(mode: .listening(windowIsVisible ? model.voiceLevels : VoiceLevels()), animated: !reduceMotion && windowIsVisible, color: .red, count: 24)
                     .scaleEffect(y: 1.6)
                     .accessibilityHidden(true)
-                Text(durationLabel(model.recordingDuration))
+                Text(durationLabel(windowIsVisible ? model.recordingDuration : 0))
                     .font(.body.monospacedDigit())
                     .foregroundStyle(.secondary)
                     .contentTransition(.numericText())
             }
         } else if working {
             HStack(spacing: 12) {
-                Waveform(mode: .processing, animated: !reduceMotion, color: .secondary, count: 24)
+                Waveform(mode: .processing, animated: !reduceMotion && windowIsVisible, color: .secondary, count: 24)
                     .accessibilityHidden(true)
                 Text("Your words will appear where you were typing.")
                     .foregroundStyle(.secondary)

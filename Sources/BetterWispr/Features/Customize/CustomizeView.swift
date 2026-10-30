@@ -1,6 +1,5 @@
 import AppKit
 import BetterWisprCore
-import LiquidOrb
 import SwiftUI
 
 /// Fork: the Customize page — what the dictation capsule draws, how the orb looks and where the capsule appears.
@@ -200,34 +199,28 @@ private struct OrbThumbnail: View {
 }
 
 /// The dictation capsule as it will look, with a sample voice; rebuilt when the appearance changes, since orb seeds
-/// are read when an orb is created.
+/// are read when an orb is created. It is the capsule's own OrbWaveform fed a ready-made level track: the orb and the
+/// bars animate that track themselves, so this body runs when the track is renewed instead of every frame — per-frame
+/// updates here re-laid out the whole page (~40% of a core measured). Stopped while the window is hidden.
 private struct CapsulePreview: View {
     let appearance: OrbAppearance
     let samplesVoice: Bool
-    @State private var smoothing = LevelSmoothing()
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.windowIsVisible) private var windowIsVisible
+
+    private static let track: TimeInterval = 30
 
     var body: some View {
-        let orb = appearance.visualizer == .orb && !reduceMotion
-        let height: CGFloat = orb ? appearance.size + 8 : 28
-        let _ = appearance.install()
-        TimelineView(.animation(paused: reduceMotion)) { context in
-            let level = samplesVoice ? sampleLevel(at: context.date) : 0
+        let animated = !reduceMotion && windowIsVisible
+        let orb = OrbWaveform.isShown(animated: animated)
+        TimelineView(.periodic(from: .now, by: Self.track)) { context in
             HStack(spacing: 4) {
                 Image(systemName: "xmark")
                     .frame(width: 18, height: 18)
                     .background(.white.opacity(0.2), in: Circle())
                     .frame(width: 24, height: 24)
-                Group {
-                    if orb {
-                        LiquidOrbView(state: samplesVoice ? .thinking : .idle,
-                                      audio: LiquidOrbAudio(low: level, mid: level, high: level, all: level))
-                            .frame(width: appearance.size, height: appearance.size)
-                    } else {
-                        Waveform(mode: samplesVoice ? .listening(VoiceLevels(values: [level])) : .waiting, animated: !reduceMotion, count: 9)
-                    }
-                }
-                .padding(.horizontal, orb ? 4 : 8)
+                OrbWaveform(mode: samplesVoice ? .listening(SampleVoice.track(from: context.date, length: Self.track + 5)) : .waiting, animated: animated, count: 9)
+                    .padding(.horizontal, orb ? 4 : 8)
                 Image(systemName: "checkmark")
                     .foregroundStyle(.black)
                     .frame(width: 18, height: 18)
@@ -237,7 +230,7 @@ private struct CapsulePreview: View {
             .font(.system(size: 10, weight: .semibold))
             .foregroundStyle(.white)
             .padding(.horizontal, 6)
-            .frame(height: height)
+            .frame(height: orb ? appearance.size + 8 : 28)
             .background(Color.black.opacity(0.8), in: Capsule())
             .overlay { Capsule().strokeBorder(.white.opacity(0.16)) }
         }
@@ -249,10 +242,17 @@ private struct CapsulePreview: View {
         .accessibilityLabel("Capsule preview")
     }
 
-    /// Syllables under a slow phrase envelope, eased like the capsule's level.
-    private func sampleLevel(at date: Date) -> Float {
-        let t = date.timeIntervalSinceReferenceDate
-        let voice = Float((0.65 + 0.35 * sin(t * 1.3)) * (0.4 + 0.6 * max(0, sin(t * 9))))
-        return min(1, smoothing.next(voice) * Float(appearance.sensitivity))
+}
+
+/// Syllables under a slow phrase envelope, as a level track the capsule visualizers play on their own.
+enum SampleVoice {
+    static func track(from start: Date, length: TimeInterval) -> VoiceLevels {
+        let step = 0.02
+        let origin = start.timeIntervalSinceReferenceDate
+        let values = (0..<Int(length / step)).map { index in
+            let t = origin + Double(index) * step
+            return Float((0.65 + 0.35 * sin(t * 1.3)) * (0.4 + 0.6 * max(0, sin(t * 9))))
+        }
+        return VoiceLevels(values: values, start: start, step: step)
     }
 }

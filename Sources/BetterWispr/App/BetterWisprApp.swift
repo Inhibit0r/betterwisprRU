@@ -18,6 +18,7 @@ struct BetterWisprApp: App {
                 }
             }
             .overlay { LanguageChoiceGate() } // Fork: asks for the interface language once.
+            .tracksWindowVisibility() // Fork: hidden window stops per-frame updates.
             .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
                 delegate.model.refreshPermissions()
             }
