@@ -547,7 +547,7 @@ private struct CapsuleWaveform: View {
     let count: Int
 
     var body: some View {
-        Waveform(mode: mode, animated: animated, count: count)
+        OrbWaveform(mode: mode, animated: animated, count: count)
     }
 
     private var mode: Waveform.Mode {

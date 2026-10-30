@@ -21,9 +21,11 @@ let package = Package(
         ]),
         .executableTarget(
             name: "BetterWispr",
-            dependencies: ["BetterWisprCore", .product(name: "Sparkle", package: "Sparkle")],
+            dependencies: ["BetterWisprCore", "LiquidOrb", .product(name: "Sparkle", package: "Sparkle")],
             linkerSettings: [.unsafeFlags(["-Xlinker", "-rpath", "-Xlinker", "@executable_path/../Frameworks"])]
         ),
+        // Fork: generated Liquid Orb export, kept verbatim; Swift 5 mode because the export predates strict concurrency.
+        .target(name: "LiquidOrb", exclude: ["LICENSE"], swiftSettings: [.swiftLanguageMode(.v5)]),
         .executableTarget(name: "BetterWisprCLI", dependencies: ["BetterWisprCore"]),
         .testTarget(name: "BetterWisprCoreTests", dependencies: ["BetterWisprCore", "BetterWispr"])
     ],
