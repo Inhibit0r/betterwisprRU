@@ -12,7 +12,7 @@ grep -q 'public struct LiquidOrbView' "$export_file" || { echo 'Это не Swif
 # The editor's Metal export calls discard_fragment() unqualified; current Metal compilers reject it.
 sed -i '' -E 's/([^:])discard_fragment\(\)/\1metal::discard_fragment()/' "$export_file"
 
-# Voice-driven waves (Prismatic Field, Siri Wave, Voice Membrane): the editor's audio mapping never changes the wave
+# Voice-driven waves (Prismatic Field and its Violet Field palette, Siri Wave): the editor's audio mapping never changes the wave
 # height, so the voice level rides in particleDensity (read only by Particle Ribbons) and opens the waves from the centre line.
 patch() {
     local description="$1" expression="$2"
@@ -22,7 +22,6 @@ patch() {
 }
 patch 'Prismatic Field: высота волн от голоса' 's/float amplitude_2 = 0\.26 \+ \(_e13 \* 0\.27\);/float amplitude_2 = (0.26 + (_e13 * 0.27)) * (0.3 + 1.2 * u.particleDensity);/'
 patch 'Siri Wave: высота волн от голоса' 's/float mainAmplitude = (\(0\.25 \+ \(_e50 \* 0\.075\)\) \+ \(low \* 0\.018\));/float mainAmplitude = ($1) * (0.3 + 1.2 * u.particleDensity);/'
-patch 'Voice Membrane: изгиб полосы от голоса' 's/float amplitude_4 = 0\.2 \+ \(_e24 \* 0\.018\);/float amplitude_4 = (0.2 + (_e24 * 0.018)) * (0.3 + 1.2 * u.particleDensity);/'
 patch 'громкость в particleDensity' 's/(\n    func level\(_ value: Float\) -> Float \{[^\n]*\}\n)/$1    values[32] = level(bands.all)\n/'
 # Styles and colours chosen in Settings → Orb replace the baked seeds (Sources/LiquidOrb/LiquidOrbSeeds.swift).
 patch 'подмена параметров стиля' 's/(\nprivate func orbUniformSeed\(for state: LiquidOrbState\) -> \[Float\] \{\n)    switch state \{\n/$1    if let seeds = LiquidOrbSeeds.current { return state == .idle ? seeds.idle : seeds.thinking }\n    return switch state {\n/'

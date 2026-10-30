@@ -4,7 +4,7 @@ import Testing
 /// Fork: Settings → Orb must hand the renderer complete seeds with the customization in the right uniforms.
 @Test func orbStyleSeedsMatchTheirShaderStyles() {
     let styleIndex = 15
-    for (style, shaderStyle) in [(OrbStyle.prismaticField, Float(14)), (.siriWave, 9), (.voiceMembrane, 19)] {
+    for (style, shaderStyle) in [(OrbStyle.prismaticField, Float(14)), (.violetField, 14), (.siriWave, 9)] {
         #expect(style.seeds.idle.count == 136 && style.seeds.thinking.count == 136, "\(style)")
         #expect(style.seeds.idle[styleIndex] == shaderStyle && style.seeds.thinking[styleIndex] == shaderStyle, "\(style)")
     }

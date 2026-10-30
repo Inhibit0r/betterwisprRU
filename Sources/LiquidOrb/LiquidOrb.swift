@@ -1076,7 +1076,7 @@ metal::float3 glsVoiceWaveFluid(
     float rimEnvelope = metal::pow(metal::max(1.0 - (q_9.x * q_9.x), 0.0), 0.72);
     float drift_3 = t_12 * 0.82;
     float _e24 = u.warp;
-    float amplitude_4 = (0.2 + (_e24 * 0.018)) * (0.3 + 1.2 * u.particleDensity);
+    float amplitude_4 = 0.2 + (_e24 * 0.018);
     float mainY_2 = rimEnvelope * ((amplitude_4 * metal::sin((q_9.x * 1.48) + drift_3)) + (0.055 * metal::sin(((q_9.x * 3.2) - (drift_3 * 0.43)) + 1.1)));
     float distance = q_9.y - mainY_2;
     float _e52 = u.ridgeAmt;

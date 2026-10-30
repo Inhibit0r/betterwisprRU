@@ -3,21 +3,21 @@ import LiquidOrb
 
 /// Fork: orb styles whose waves open from the centre line with the voice (patched in scripts/orb-import.sh).
 enum OrbStyle: String, CaseIterable {
-    case prismaticField, siriWave, voiceMembrane
+    case prismaticField, violetField, siriWave
 
     var title: String {
         switch self {
         case .prismaticField: "Prismatic Field"
+        case .violetField: "Violet Field"
         case .siriWave: "Siri Wave"
-        case .voiceMembrane: "Voice Membrane"
         }
     }
 
     var seeds: (idle: [Float], thinking: [Float]) {
         switch self {
         case .prismaticField: OrbStyleSeeds.prismaticField
+        case .violetField: OrbStyleSeeds.violetField
         case .siriWave: OrbStyleSeeds.siriWave
-        case .voiceMembrane: OrbStyleSeeds.voiceMembrane
         }
     }
 }
