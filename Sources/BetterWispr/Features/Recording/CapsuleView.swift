@@ -27,7 +27,7 @@ struct CapsuleView: View {
         }
     }
     private var surfaceRadius: CGFloat {
-        if model.phase != .idle { 24 } else if failure == nil, meetingPrompt != nil { 26 } else if showsCard { 22 } else { 18 }
+        if model.phase != .idle { showsCard ? 24 : max(24, OrbWaveform.pillHeight(animated: !reduceMotion) / 2) } else if failure == nil, meetingPrompt != nil { 26 } else if showsCard { 22 } else { 18 }
     }
     private var showsToolbar: Bool { !showsCard && !model.isBusy && !isMeetingCapturing && hover.isHovering }
     private var spring: Animation? { reduceMotion ? nil : .spring(duration: 0.26, bounce: 0) }
@@ -422,7 +422,7 @@ struct CapsuleView: View {
                 .help("Cancel dictation")
                 .accessibilityLabel("Cancel dictation")
             }
-            if model.phase == .transcribing {
+            if model.phase == .transcribing, !OrbWaveform.isShown(animated: !reduceMotion) {
                 ProgressView()
                     .controlSize(.small)
                     .frame(maxWidth: .infinity)
@@ -450,7 +450,7 @@ struct CapsuleView: View {
         .foregroundStyle(.white)
         .buttonStyle(.plain)
         .padding(.horizontal, 4)
-        .frame(width: model.isHeldSession ? 96 : 108, height: 28)
+        .frame(width: (model.isHeldSession ? 96 : 108) + OrbWaveform.pillExtraWidth(animated: !reduceMotion), height: OrbWaveform.pillHeight(animated: !reduceMotion))
         .contentShape(Capsule())
         .contextMenu { Button("Cancel dictation", action: model.cancelRecording) }
         .accessibilityActions { Button("Cancel dictation", action: model.cancelRecording) }
@@ -524,6 +524,7 @@ struct CapsuleView: View {
         if isNotetaking { return isMeetingRecording ? "Meeting audio level" : "Starting notetaker" }
         switch model.phase {
         case .recording: return "Microphone input level"
+        case .transcribing: return "Transcribing"
         default: return "Starting microphone"
         }
     }
@@ -547,7 +548,7 @@ private struct CapsuleWaveform: View {
     let count: Int
 
     var body: some View {
-        OrbWaveform(mode: mode, animated: animated, count: count)
+        OrbWaveform(mode: mode, animated: animated, count: count, compact: isNotetaking)
     }
 
     private var mode: Waveform.Mode {

@@ -136,7 +136,7 @@ final class CapsuleController {
         let pointer = NSEvent.mouseLocation
         guard let screen = NSScreen.screens.first(where: { NSMouseInRect(pointer, $0.frame, false) }) ?? NSScreen.main else { return }
         let frame = screen.visibleFrame
-        panel.setFrameOrigin(NSPoint(x: frame.midX - 220, y: frame.minY + 12))
+        panel.setFrameOrigin(CapsulePlacement.current.origin(in: frame, pointer: pointer, panel: panel.frame, isVisible: panel.isVisible))
     }
 
     func close() {

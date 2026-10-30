@@ -97,6 +97,8 @@ struct SettingsView: View {
                     RowDivider()
                     SettingToggle("Floating recording capsule", caption: "A small voice control at the bottom of your screen.", isOn: setting(\.showCapsule))
                     RowDivider()
+                    CapsulePlacementRow()
+                    RowDivider()
                     SettingToggle("Show words as you speak", caption: "Previews Parakeet’s recognition in the capsule while you record. The pasted text is still the full recognition.", isOn: setting(\.showLiveText))
                     RowDivider()
                     SettingToggle("Detect meetings", caption: "Offer the notetaker when Zoom, Google Meet, Teams, a Slack huddle or another call starts using the microphone. Calls in a browser need Accessibility.", isOn: setting(\.detectMeetings))
