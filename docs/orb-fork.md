@@ -12,19 +12,19 @@
 | Файл | Что делает |
 |------|------------|
 | `Sources/LiquidOrb/LiquidOrb.swift` | Экспорт орба (SwiftUI + Metal-шейдер строкой) с правками импорта. Не редактировать руками — менять через импорт. |
-| `Sources/LiquidOrb/LiquidOrbSeeds.swift` | Точка подмены параметров экспорта: стиль и цвета из настроек без нового экспорта. |
+| `Sources/LiquidOrb/LiquidOrbHooks.swift` | Точки подмены в экспорте: параметры стиля (стиль и цвета без нового экспорта) и источник громкости, который орб читает на каждом кадре. |
 | `Sources/BetterWispr/Features/Recording/OrbStyleSeeds.swift` | Параметры стилей из выгрузок редактора (генерирует `scripts/orb-seeds.sh`). |
 | `Sources/BetterWispr/Features/Recording/OrbAppearance.swift` | Стили и кастомизация орба: размер, чувствительность, скорость, стекло, цвета волн; UserDefaults `fork.orb.*`. |
-| `Sources/BetterWispr/Features/Settings/OrbSettingsSection.swift` | Раздел настроек «Orb» с живым превью. |
+| `Sources/BetterWispr/Features/Customize/CustomizeView.swift` | Вкладка «Customize»: превью капсулы, выбор визуализации (штатные полоски или орб), настройки орба, положение капсулы. |
+| `Sources/BetterWispr/Features/Dashboard/DashboardView.swift` | Страница `customize` в группе App: отдельный `case` вне общего списка, иконка, маршрут на `CustomizeView`. |
 | `Sources/BetterWispr/Features/Recording/OrbWaveform.swift` | Переходник: уровень голоса → орб, размер, сглаживание, состояния. Сюда — все свои доработки анимации. |
 | `Sources/BetterWispr/Features/Recording/CapsuleView.swift` | `OrbWaveform(...)` вместо `Waveform(...)` в `CapsuleWaveform`; отступы вокруг `dictationPill` в `surface` и скругление из `OrbWaveform` (строку `.frame` пилюли не трогаем — её меняет upstream); орб вместо спиннера при распознавании; подпись VoiceOver «Transcribing». |
-| `Sources/BetterWispr/App/CapsulePlacement.swift` | Место появления капсулы и строка «Capsule position» в настройках; значение в UserDefaults (`fork.capsulePlacement`), схема AppSettings не меняется. |
+| `Sources/BetterWispr/App/CapsulePlacement.swift` | Место появления капсулы (по умолчанию — над указателем) и строка «Capsule position»; значение в UserDefaults (`fork.capsulePlacement`), схема AppSettings не меняется. |
 | `Sources/BetterWispr/App/CapsuleController.swift` | Одна строка: позиция панели из `CapsulePlacement`. |
-| `Sources/BetterWispr/Features/Settings/SettingsView.swift` | Разделы «Capsule» (`CapsulePlacementRow()`) и «Orb» (`OrbSettingsSection()`) сразу после «Appearance» (рядом с тумблерами капсулы upstream вставляет свои). |
 | `Package.swift` | Модуль `LiquidOrb` (Swift 5, экспорт не рассчитан на строгую конкурентность) и зависимость от него. |
 | `Resources/Info.plist` | `SUFeedURL` указывает на релизы форка: иначе Sparkle заменит сборку с орбом на оригинал. |
 | `Tests/BetterWisprCoreTests/OrbAppearanceTests.swift` | Параметры каждого стиля полные и с верным номером стиля; скорость, стекло и цвета попадают в нужные ячейки. |
-| `Tests/BetterWisprCoreTests/CapsulePlacementTests.swift` | Позиции капсулы: штатная по центру, углы, «над курсором» не двигается, пока капсула видна. |
+| `Tests/BetterWisprCoreTests/CapsulePlacementTests.swift` | Позиции капсулы: штатная по центру, углы, «над указателем» фиксируется в начале диктовки, даже когда капсула видна постоянно, и не едет за мышью. |
 | `Tests/BetterWisprCoreTests/LiquidOrbShaderTests.swift` | Компилирует шейдер орба: сломанный экспорт роняет приложение при первой диктовке, тест ловит это раньше. |
 | `.github/workflows/sync-upstream.yml` | Ежедневно вливает новый релиз upstream в ветку `orb`. |
 | `scripts/orb-update.sh` | Локально: показывает новое в форке, спрашивает, пересобирает и ставит в `/Applications`. |
@@ -80,13 +80,26 @@ Aurora Veil, Neural Plasma и Violet Core линии не имеют — в вы
 на имена из сгенерированного Metal: если редактор их сменит, импорт остановится с сообщением,
 какой патч не лёг.
 
-### Настройки орба
+### Вкладка Customize
 
-Settings → Orb: стиль, размер (48–112 pt), чувствительность к голосу и скорость (×0.5–×2),
-стеклянная оболочка, три цвета волн (Reset возвращает цвета стиля) и живое превью с
-образцом голоса. Цвета в покое приложение получает из выбранных: темнее и серее. Всё хранится
-в UserDefaults `fork.orb.*`, схема AppSettings upstream не меняется; применяется при следующем
-появлении капсулы. Шейдер у всех стилей один — стиль задают только параметры (136 чисел).
+Боковое меню → App → Customize: живое превью капсулы с образцом голоса; выбор визуализации —
+Classic bars (штатные полоски BetterWispr) или орб Prismatic Field / Violet Field / Siri Wave;
+размер (48–112 pt), чувствительность к голосу и скорость (×0.5–×2), стеклянная оболочка, три цвета
+волн (Reset возвращает цвета стиля); положение капсулы. Цвета в покое получаются из выбранных:
+темнее и серее. Всё хранится в UserDefaults `fork.*`, схема AppSettings upstream не меняется;
+применяется при следующем появлении капсулы. Шейдер у всех стилей один — стиль задают только
+параметры (136 чисел). Карточки стилей — неподвижные миниатюры палитры: параметры орба
+передаются через одну общую ячейку, поэтому живой орб на странице один (превью).
+
+### Производительность
+
+Замер 30.10.2026 (MacBook на Apple Silicon, окно 72 pt, образец голоса, 60 fps, 12 с, медиана трёх
+запусков, CPU одного ядра по `top`): штатные полоски BetterWispr — 9,5%; орб, которому громкость
+передаётся через SwiftUI на каждом кадре (`TimelineView`), — 8,3%; орб, который сам читает
+громкость при отрисовке (`LiquidOrbAudioSource`, так сейчас), — 4,3%. Время GPU на кадр орба —
+0,16–0,29 мс (Metal `gpuStartTime`/`gpuEndTime`), то есть ~1,5% кадра. Общая загрузка GPU по
+`ioreg` для оценки не годится: шум системы больше вклада орба. Орб существует только пока видна
+капсула диктовки; в покое его нет.
 
 ### Как добавить стиль
 
@@ -105,9 +118,9 @@ Settings → Orb: стиль, размер (48–112 pt), чувствитель
 
 ### Место появления
 
-Settings → Capsule → «Capsule position»: снизу по центру (как в upstream), снизу слева,
-снизу справа, над указателем мыши. «Над указателем» выбирается в момент появления капсулы
-и не следует за мышью, пока капсула видна. Чтобы капсула не висела в покое, выключить
+Customize → Position → «Capsule position»: над указателем мыши (по умолчанию), снизу по центру
+(как в upstream), снизу слева, снизу справа. «Над указателем» фиксируется в начале диктовки и
+держится до её конца, за мышью не едет; в покое капсула стоит снизу по центру. Чтобы капсула не висела в покое, выключить
 «Floating recording capsule» — тогда она появляется только на время диктовки и созвона.
 
 Текущий орб (Prismatic Field):

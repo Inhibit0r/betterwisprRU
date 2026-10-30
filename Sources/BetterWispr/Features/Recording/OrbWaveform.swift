@@ -15,7 +15,7 @@ struct OrbWaveform: View {
     private static let compactDiameter: CGFloat = 40
     private static let hasMetal = MTLCreateSystemDefaultDevice() != nil
 
-    static func isShown(animated: Bool) -> Bool { animated && hasMetal }
+    static func isShown(animated: Bool) -> Bool { animated && hasMetal && OrbAppearance.current.visualizer == .orb }
     /// The orb widens the 28 pt dictation pill past its fixed frame (two 24 pt buttons leave 44 pt for it);
     /// this padding grows the capsule glass around it without touching upstream's frame line.
     static func pillPadding(animated: Bool) -> EdgeInsets {

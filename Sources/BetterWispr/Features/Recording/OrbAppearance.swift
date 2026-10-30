@@ -22,8 +22,14 @@ enum OrbStyle: String, CaseIterable {
     }
 }
 
-/// Fork: Settings → Orb, kept in UserDefaults beside AppSettings so the upstream settings schema stays unchanged.
+/// Fork: what the capsule draws while you dictate — BetterWispr's own level bars or an orb.
+enum CapsuleVisualizer: String {
+    case orb, bars
+}
+
+/// Fork: the Customize page, kept in UserDefaults beside AppSettings so the upstream settings schema stays unchanged.
 struct OrbAppearance: Hashable {
+    var visualizer = CapsuleVisualizer.orb
     var style = OrbStyle.prismaticField
     var size: Double = 72
     var sensitivity: Double = 1
@@ -33,6 +39,7 @@ struct OrbAppearance: Hashable {
     var colors = ["", "", ""]
 
     enum Key {
+        static let visualizer = "fork.visualizer"
         static let style = "fork.orb.style", size = "fork.orb.size", sensitivity = "fork.orb.sensitivity"
         static let speed = "fork.orb.speed", glass = "fork.orb.glass"
         static let colors = ["fork.orb.color1", "fork.orb.color2", "fork.orb.color3"]
@@ -47,6 +54,7 @@ struct OrbAppearance: Hashable {
     static var current: OrbAppearance {
         let defaults = UserDefaults.standard
         var appearance = OrbAppearance()
+        appearance.visualizer = defaults.string(forKey: Key.visualizer).flatMap(CapsuleVisualizer.init) ?? appearance.visualizer
         appearance.style = defaults.string(forKey: Key.style).flatMap(OrbStyle.init) ?? appearance.style
         if let size = defaults.object(forKey: Key.size) as? Double { appearance.size = sizes.clamped(size) }
         if let sensitivity = defaults.object(forKey: Key.sensitivity) as? Double { appearance.sensitivity = factors.clamped(sensitivity) }

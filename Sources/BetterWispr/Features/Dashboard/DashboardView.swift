@@ -7,10 +7,12 @@ enum AppPage: String, CaseIterable, Identifiable {
     static let sections: [(title: String?, pages: [AppPage])] = [
         (nil, [.overview, .insights, .meetings, .history]),
         ("Personalize", [.models, .vocabulary, .style]),
-        ("App", [.settings, .about]),
+        ("App", [.customize, .settings, .about]),
     ]
 
     var id: String { rawValue }
+    // Fork: declared apart from the case list above, which upstream edits when it adds pages.
+    case customize
     var title: String {
         switch self {
         case .overview: "Home"
@@ -29,6 +31,7 @@ enum AppPage: String, CaseIterable, Identifiable {
         case .style: "textformat"
         case .settings: "gearshape"
         case .about: "info.circle"
+        case .customize: "paintpalette"
         }
     }
 }
@@ -95,6 +98,7 @@ struct DashboardView: View {
         case .style: StyleView(model: model)
         case .settings: SettingsView(model: model)
         case .about: AboutView(updater: model.updater, shortcut: model.settings.shortcut)
+        case .customize: CustomizeView()
         }
     }
 

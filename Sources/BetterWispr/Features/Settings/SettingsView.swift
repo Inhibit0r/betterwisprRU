@@ -31,12 +31,6 @@ struct SettingsView: View {
                     }
                 }
 
-                SettingsSection("Capsule") {
-                    CapsulePlacementRow()
-                }
-
-                OrbSettingsSection()
-
                 SettingsSection("Shortcut") {
                     ShortcutRecorder(model: model)
                     RowDivider()
