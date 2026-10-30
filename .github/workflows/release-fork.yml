@@ -64,6 +64,36 @@ jobs:
         with:
           name: dmg
           path: release
+      # Свой сертификат вместо ad-hoc: macOS узнаёт приложение по отпечатку сертификата, и разрешения переживают обновления.
+      # Переподпись здесь, а не в build, чтобы ключ не попадал туда, где работает код upstream.
+      - name: Подписать приложение сертификатом форка
+        env:
+          SIGNING_P12_BASE64: ${{ secrets.BETTERWISPR_SIGNING_P12 }}
+          SIGNING_P12_PASSWORD: ${{ secrets.BETTERWISPR_SIGNING_P12_PASSWORD }}
+        run: |
+          set -euo pipefail
+          [ -n "$SIGNING_P12_BASE64" ] || { echo "нет секрета BETTERWISPR_SIGNING_P12 — см. docs/orb-fork.md"; exit 1; }
+          [[ "$BUILD" =~ ^$VERSION\.[0-9]{12}$ ]] || { echo "странный номер сборки: $BUILD"; exit 1; }
+          dmg="release/BetterWispr-$BUILD.dmg"
+          kc="$RUNNER_TEMP/signing.keychain-db"; kcpass="$(openssl rand -hex 24)"
+          printf '%s' "$SIGNING_P12_BASE64" | base64 -d > "$RUNNER_TEMP/signing.p12"
+          security create-keychain -p "$kcpass" "$kc"
+          security set-keychain-settings "$kc"
+          security unlock-keychain -p "$kcpass" "$kc"
+          security import "$RUNNER_TEMP/signing.p12" -k "$kc" -P "$SIGNING_P12_PASSWORD" -T /usr/bin/codesign >/dev/null
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$kcpass" "$kc" >/dev/null
+          security list-keychains -d user -s "$kc" $(security list-keychains -d user | tr -d '"')
+          rm "$RUNNER_TEMP/signing.p12"
+          mnt="$(mktemp -d)"
+          hdiutil attach -quiet -nobrowse -readonly -mountpoint "$mnt" "$dmg"
+          mkdir -p release/staging && ditto "$mnt/BetterWispr.app" release/staging/BetterWispr.app
+          hdiutil detach -quiet "$mnt"
+          codesign --force --deep --keychain "$kc" --sign "BetterWisprRU Code Signing" --preserve-metadata=entitlements,flags release/staging/BetterWispr.app
+          codesign --verify --deep --strict release/staging/BetterWispr.app
+          codesign -d -r- release/staging/BetterWispr.app 2>&1 | grep -q 'certificate leaf = H"' || { echo "приложение подписано не сертификатом форка"; exit 1; }
+          ln -s /Applications release/staging/Applications
+          hdiutil create -volname BetterWispr -srcfolder release/staging -format UDZO -ov "$dmg"
+          security delete-keychain "$kc"
       - name: Подписать обновление и выпустить релиз
         env:
           SPARKLE_ED_PRIVATE_KEY: ${{ secrets.SPARKLE_ED_PRIVATE_KEY }}
@@ -101,5 +131,5 @@ jobs:
           EOF
           gh release create "$tag" --repo "$GITHUB_REPOSITORY" --target "$SHA" --latest \
             --title "BetterWispr $VERSION ($BUILD)" \
-            --notes "Сборка форка с орбом и русским интерфейсом, коммит $SHA. Только Apple Silicon; подпись ad-hoc — при первой установке «Открыть всё равно» в «Конфиденциальность и безопасность». Установленное приложение обновляется само: «Проверить обновления…» в строке меню." \
+            --notes "Сборка форка с орбом и русским интерфейсом, коммит $SHA. Только Apple Silicon; подпись своим сертификатом без нотаризации Apple — при первой установке «Открыть всё равно» в «Конфиденциальность и безопасность», дальше разрешения переживают обновления. Установленное приложение обновляется само: «Проверить обновления…» в строке меню." \
             "$dmg" release/appcast.xml

@@ -60,6 +60,19 @@
   && gh secret set SPARKLE_ED_PRIVATE_KEY < /tmp/k && rm /tmp/k   # из клона форка
 ```
 
+Сертификат подписи кода — тоже свой, самоподписанный «BetterWisprRU Code Signing» (до 2036 г.):
+macOS узнаёт приложение по его отпечатку, поэтому микрофон и Универсальный доступ переживают
+обновления. На Mac он лежит в `~/.config/betterwispr-signing/` (`signing.p12` и отдельная связка
+`signing.keychain-db`), пароль — в связке «Вход», запись `betterwispr-signing-p12`; `orb-update.sh`
+сам открывает эту связку. На GitHub — секреты `BETTERWISPR_SIGNING_P12` (p12 в base64) и
+`BETTERWISPR_SIGNING_P12_PASSWORD`; переподписывает задание `publish`, куда код upstream не попадает.
+Сменится сертификат — разрешения придётся выдать ещё раз. Восстановить секреты:
+
+```bash
+base64 -i ~/.config/betterwispr-signing/signing.p12 | gh secret set BETTERWISPR_SIGNING_P12
+security find-generic-password -a betterwispr -s betterwispr-signing-p12 -w | gh secret set BETTERWISPR_SIGNING_P12_PASSWORD
+```
+
 Ручной запуск синхронизации: `gh workflow run sync-upstream -R Inhibit0r/betterwisprRU`
 (можно `-f tag=v0.1.6`).
 
@@ -202,11 +215,12 @@ gh release create vX.Y.Z-N --target orb --title "BetterWispr X.Y.Z" release/Bett
 
 ## Ограничения
 
-- Сборка подписывается ad-hoc. Подпись сертификатом Apple Development (30.10.2026) Gatekeeper
-  после онлайн-проверки отправил в Корзину как «вредоносное ПО»; ad-hoc запускается. Цена:
-  после каждой пересборки macOS снимает разрешение Accessibility — включить BetterWispr заново в
-  «Системные настройки → Конфиденциальность и безопасность → Универсальный доступ».
-  Другую подпись можно задать через `CODESIGN_IDENTITY`.
+- Подпись — свой сертификат форка, без нотаризации Apple: на чужом Mac первый запуск — «Открыть
+  всё равно». Сертификат Apple Development не годится: Gatekeeper (30.10.2026) отправил такую сборку
+  в Корзину как «вредоносное ПО» — вероятно, из-за отозванного сертификата, который `build-app.sh`
+  берёт первым. Без сертификата форка (`~/.config/betterwispr-signing/`) `orb-update.sh` собирает
+  ad-hoc, и после каждой пересборки разрешения нужно выдавать заново. Другую подпись можно задать
+  через `CODESIGN_IDENTITY`.
 - Шейдер компилируется при первом показе орба (~150 мс на Apple Silicon), дальше берётся из кэша Metal.
 - `VoiceLevels` даёт один общий уровень, поэтому все полосы орба (low/mid/high) получают его.
 - «Над указателем» — это курсор мыши, не текстовая каретка.

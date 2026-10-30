@@ -15,7 +15,13 @@ if [[ -n "$news" ]]; then
     [[ "$answer" == [yY]* ]] || exit 0
     git merge --no-edit origin/main
 fi
-# Gatekeeper's online check moved an Apple Development-signed build to the Trash as malware; ad-hoc runs, but Accessibility must be re-granted after each rebuild.
+# The fork's self-signed certificate keeps macOS permissions across rebuilds (ad-hoc loses them each time).
+# Not the Apple Development identity: Gatekeeper moved builds signed with it to the Trash as malware.
+kc=~/.config/betterwispr-signing/signing.keychain-db
+if [[ -z "${CODESIGN_IDENTITY:-}" && -f "$kc" ]]; then
+    security unlock-keychain -p "$(security find-generic-password -a betterwispr -s betterwispr-signing-p12 -w)" "$kc"
+    CODESIGN_IDENTITY="BetterWisprRU Code Signing"
+fi
 app="$(CODESIGN_IDENTITY="${CODESIGN_IDENTITY:--}" ./scripts/build-app.sh release | tail -1)"
 pkill -x BetterWispr 2>/dev/null || true
 sleep 1
