@@ -91,6 +91,23 @@ Settings → Capsule → «Capsule position»: снизу по центру (к�
 Текущий орб (Prismatic Field):
 <https://lersent001.github.io/orb/#effect=orb-glass-liquid&style=spectrum&glass=1&state=thinking&activation=0.22&transition=0.65&preview=scene&text=Thinking...&speed=1.8&idleSpeed=0.48600000000000004&radius=0.72&contourDeform=0.03&idleContourDeform=0.009&zoom=0.46&idleZoom=0.4232&warp=4.4&idleWarp=1.9360000000000002&ridgeAmt=0.72&idleRidgeAmt=0.2736&sharp=2.2&idleSharp=2.2&bandDensity=2&idleBandDensity=2&metalDepth=0.25&idleMetalDepth=0.25&metalRoughness=0.22&idleMetalRoughness=0.22&chromaticShift=0.42&idleChromaticShift=0.42&metalScale=0.77&metalStretch=0.23&idleMetalStretch=0.23&metalAngle=65&metalOffset=0&metalPhase=0&metalEvolution=1&idleMetalEvolution=1&particleDensity=0.72&ribbonCount=5&ribbonWidth=0.42&idleRibbonWidth=0.42&ribbonTwist=1.25&idleRibbonTwist=1.25&ribbonFold=0.55&idleRibbonFold=0.55&ribbonBreath=0.3&idleRibbonBreath=0.3&particleSize=1.2&particleBloom=0.7&shade=0.06&idleShade=0.06&exposure=1.5&idleExposure=0.9299999999999999&sheen=0.26&gloss=0.24&glassOpacity=0.4&shellMidAlpha=0.18&shellEdgeAlpha=0.18&edgeSoftness=0.005&edgeGlow=0&idleEdgeGlow=0&colorA=%23FFFFFF&idleColorA=%23B4BBC2&colorB=%231677FF&idleColorB=%23285D8F&colorC=%23F249A0&idleColorC=%2391506F&colorD=%2335E6B2&idleColorD=%233F8873&highlightColor=%23FFFFFF&idleHighlightColor=%23D8DDE1&shellInner=%23FFFFFF&shellMid=%2366E8FF&shellEdge=%23D26CFF&sheenColor=%23EAF4FF&specColor=%23DCEAFF&canvasColor=%2303040A&glowColor=%231677FF&idleGlowColor=%23386789>
 
+## Раздача DMG
+
+Готовые сборки — в Releases форка, тег `vX.Y.Z-N` (голый `vX.Y.Z` занят тегом upstream и
+не попадает под фильтр синхронизации), файл `BetterWispr-X.Y.Z.dmg`. `scripts/create-dmg.sh`
+upstream требует macOS 27 (`diskutil image`), на macOS 26 — `hdiutil`:
+
+```bash
+CODESIGN_IDENTITY=- ./scripts/build-app.sh release
+mkdir -p release/staging && ditto .build/release/BetterWispr.app release/staging/BetterWispr.app
+ln -s /Applications release/staging/Applications
+hdiutil create -volname BetterWispr -srcfolder release/staging -format UDZO -ov release/BetterWispr-X.Y.Z.dmg
+gh release create vX.Y.Z-N --target orb --title "BetterWispr X.Y.Z" release/BetterWispr-X.Y.Z.dmg
+```
+
+Сборка только arm64 и без подписи Apple: на чужом Mac первый запуск — «Открыть всё равно»
+в «Конфиденциальность и безопасность» или `xattr -dr com.apple.quarantine`.
+
 ## Ограничения
 
 - Сборка подписывается ad-hoc. Подпись сертификатом Apple Development (30.10.2026) Gatekeeper
