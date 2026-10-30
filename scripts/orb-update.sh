@@ -15,7 +15,8 @@ if [[ -n "$news" ]]; then
     [[ "$answer" == [yY]* ]] || exit 0
     git merge --no-edit origin/orb
 fi
-app="$(./scripts/build-app.sh release | tail -1)"
+# Gatekeeper's online check moved an Apple Development-signed build to the Trash as malware; ad-hoc runs, but Accessibility must be re-granted after each rebuild.
+app="$(CODESIGN_IDENTITY="${CODESIGN_IDENTITY:--}" ./scripts/build-app.sh release | tail -1)"
 pkill -x BetterWispr 2>/dev/null || true
 sleep 1
 rm -rf /Applications/BetterWispr.app
