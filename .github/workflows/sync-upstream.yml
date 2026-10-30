@@ -56,9 +56,12 @@ jobs:
           echo "tag=${tag:-unknown}" >> "$GITHUB_OUTPUT"
           if [ -z "$tag" ]; then echo "state=no-tags" >> "$GITHUB_OUTPUT"; exit 0; fi
           if git merge-base --is-ancestor "$tag" HEAD; then echo "state=noop" >> "$GITHUB_OUTPUT"; exit 0; fi
+          base="$(git rev-parse HEAD)"
           if ! git merge --no-edit "$tag"; then git merge --abort; echo "state=conflict" >> "$GITHUB_OUTPUT"; exit 0; fi
           # Workflow из upstream получил бы секреты форка (ключи подписи), поэтому такой релиз вливают только вручную.
-          if [ -n "$(git diff --name-only HEAD^1 HEAD -- .github)" ]; then echo "state=workflows" >> "$GITHUB_OUTPUT"; exit 0; fi
+          # Сравнение с вершиной до слияния, а не с HEAD^1: при перемотке HEAD^1 — не наш коммит.
+          github_changes="$(git diff --name-only "$base" HEAD -- .github)"
+          if [ -n "$github_changes" ]; then echo "state=workflows" >> "$GITHUB_OUTPUT"; exit 0; fi
           echo "tree=$(git rev-parse 'HEAD^{tree}')" >> "$GITHUB_OUTPUT"
           echo "state=merged" >> "$GITHUB_OUTPUT"
       - name: Орб на месте и приложение собирается
